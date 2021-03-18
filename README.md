@@ -5,8 +5,11 @@
 `withCSV` is a Node.js library to consume CSV files with clean and readable code, without sacrificing performance. It features :
 
 📜 A fluent API similar to lodash chainable methods, treating your CSV like the array of objects it really is
+
 🏋️ A [robust parsing library based on Node streams](https://www.npmjs.com/package/csv-parser) which makes it memory-efficient by default, even on very large files
+
 🖋️ Smart typing which makes it a pleasure to work with in Typescript
+
 ⏳ Support for asynchronous callbacks
 
 ## Getting started
@@ -87,7 +90,8 @@ const records = await withCSV('my.csv').get(['name', 'phone', 'flag'])
 The `query` method also allows you to select columns on your file. The resulting instance exposes the querying API, which can be split in two groups :
 
 ⛓️ chainable methods which are stacked in a pipeline through which every row will be processed one by one
-🚧 terminator methods which will trigger the reading of the file, and the processing of each row through the pipeline.
+
+🚧 terminator methods which will trigger the reading of the file, and the processing of each row through the pipeline
 
 **Only one terminator method can be present.** It will return a promise which resolves to the output of your pipeline.
 
@@ -126,7 +130,7 @@ await withCSV('my.csv')
 
 **process**: Executes the pipeline on all the rows, but without outputting any data. This is useful for example when your pipeline is based on `forEach` and you want to discard the final output data.
 
-:warning: The following methods consume the entirety of your CSV file and the resulting output will be stored in memory. Very large files should be adequately filtered before being consumed in their entirety.
+⚠️ _The following methods consume the entirety of your CSV file and the resulting output will be stored in memory. Very large files should be adequately filtered before being consumed in their entirety._
 
 **toArray**: returns the final result of the query pipeline as a javascript array.
 

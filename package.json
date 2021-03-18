@@ -5,6 +5,18 @@
   "description": "A CSV file manipulation library with a fluent API à la Lodash",
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "keywords": ["csv", "stream", "lodash"],
+  "homepage": "https://github.com/amblerhq/withCSV",
+  "bugs": "https://github.com/amblerhq/withCSV/issues",
+  "author": {
+    "name": "Damien BUTY",
+    "email": "dam.buty@gmail.com",
+    "url": "https://github.com/Dam-Buty"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amblerhq/withCSV.git"
+  },
   "scripts": {
     "postinstall": "yarn build",
     "build": "tsc"
