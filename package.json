@@ -1,11 +1,15 @@
 {
   "name": "with-csv",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "description": "A CSV file manipulation library with a fluent API à la Lodash",
   "main": "build/index.js",
   "types": "build/index.d.ts",
-  "keywords": ["csv", "stream", "lodash"],
+  "keywords": [
+    "csv",
+    "stream",
+    "lodash"
+  ],
   "homepage": "https://github.com/amblerhq/withCSV",
   "bugs": "https://github.com/amblerhq/withCSV/issues",
   "author": {
