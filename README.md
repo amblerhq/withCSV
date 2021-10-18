@@ -104,6 +104,8 @@ The only major differences are :
 
 ### ⛓️ Chainable methods
 
+**uniq**: deduplicates records from your CSV file. Rows are deduplicated by the result of the provided callback, or by the value of all columns.
+
 **filter**: filters out records.
 
 **map**: maps each record to a new shape. The output will be automatically typed correctly.
