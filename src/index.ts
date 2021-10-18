@@ -1,3 +1,4 @@
+import {createHash} from 'crypto'
 import fs from 'fs'
 import pick from 'lodash.pick'
 import isEqual from 'lodash.isequal'
@@ -13,10 +14,13 @@ type PipelineMethod<T> = (
   value: T
 }>
 
+const hashCache = new Set()
+
 type CsvRowsCollection<T> = {
   /**
    * Chainable methods
    */
+  uniq(cb: ArrayMethod<T, string>): CsvRowsCollection<T>
   filter(cb: ArrayMethod<T, boolean>): CsvRowsCollection<T>
   map<U>(cb: ArrayMethod<T, U>): CsvRowsCollection<U>
   forEach(cb: ArrayMethod<T, void>): CsvRowsCollection<T>
@@ -76,6 +80,21 @@ export function withCSV(csvFile: string, options?: csv.Options | readonly string
       /**
        * Chainable methods
        */
+      uniq(callback: ArrayMethod<T, string>) {
+        pipeline.push(async function uniq_(value: T, index: number) {
+          const hash = createHash('sha1')
+          const rowToHash = callback ? await callback(value, index) : value
+          hash.update(JSON.stringify(rowToHash), 'utf8')
+          const hashedRow = hash.digest('hex')
+          if (!hashCache.has(hashedRow)) {
+            hashCache.add(hashedRow)
+            return {continueChain: true, value}
+          }
+          return {continueChain: false, value: null}
+        })
+        hashCache.clear()
+        return getQueryChain<T>()
+      },
       filter(callback: ArrayMethod<T, boolean>) {
         pipeline.push(async function filter_(value: T, index: number) {
           if (await callback(value, index)) {
