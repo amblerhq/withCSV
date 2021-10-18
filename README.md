@@ -17,15 +17,15 @@
 `withCSV` can be installed using your package manager of choice :
 
 ```bash
-npm install withCSV
+npm install with-csv
 # or
-yarn add withCSV
+yarn add with-csv
 ```
 
 You can then use it to parse and manipulate CSV files like so :
 
 ```typescript
-import {withCSV} from 'withCSV'
+import {withCSV} from 'with-csv'
 /*
 my.csv contains the following rows :
 
