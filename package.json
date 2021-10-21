@@ -23,7 +23,8 @@
   },
   "scripts": {
     "postinstall": "yarn build",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "ts-node test/with-csv.ts"
   },
   "dependencies": {
     "@types/lodash.isequal": "^4.5.5",
@@ -33,5 +34,11 @@
     "lodash.isequal": "^4.5.0",
     "lodash.pick": "^4.4.0",
     "typescript": "4.2.3"
+  },
+  "devDependencies": {
+    "berror": "^1.1.1",
+    "chalk": "^4.1.2",
+    "expect": "^27.3.1",
+    "ts-node": "^10.3.0"
   }
 }
