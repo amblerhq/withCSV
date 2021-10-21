@@ -1,11 +1,11 @@
-import { withCSV } from "../index";
+import { withCSV } from "../src/index";
 import expect from "expect";
 import { execute, it } from "./test-suite";
 
 execute([
   it('should load an array of the "First name" column', async () => {
     expect(
-      await withCSV("src/test/data/small.csv").query(["First name"]).toArray()
+      await withCSV("test/data/small.csv").query(["First name"]).toArray()
     ).toEqual([
       { "First name": "Aloysius" },
       { "First name": "University" },

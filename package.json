@@ -24,7 +24,7 @@
   "scripts": {
     "postinstall": "yarn build",
     "build": "tsc",
-    "test": "ts-node src/test/with-csv.ts"
+    "test": "ts-node test/with-csv.ts"
   },
   "dependencies": {
     "@types/lodash.isequal": "^4.5.5",
