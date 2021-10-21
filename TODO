@@ -1,0 +1,11 @@
+- CLI
+  - sélection de colonnes avec inquirer
+  - dedup sur 1-n colonnes
+
+- Interface Buffer / stream / filename
+- Add toCsv
+
+- Dedup perf ?
+
+- Unit tests
+- ESLint et al

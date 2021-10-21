@@ -14,8 +14,6 @@ type PipelineMethod<T> = (
   value: T
 }>
 
-const hashCache = new Set()
-
 type CsvRowsCollection<T> = {
   /**
    * Chainable methods
@@ -34,12 +32,29 @@ type CsvRowsCollection<T> = {
   includes: (value: T) => Promise<boolean>
   toArray: () => Promise<T[]>
   toJSON: (space?: string | number) => Promise<string>
+  count: () => Promise<number>
   process: () => Promise<void>
+}
+
+const hashCache = new Set()
+let headers: string[] | null = null
+
+function getHeaders(): Promise<string[]> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      if (headers) {
+        resolve(headers)
+      }
+    }, 100)
+  })
 }
 
 export function withCSV(csvFile: string, options?: csv.Options | readonly string[]) {
   const fileStream = fs.createReadStream(csvFile, {encoding: 'utf-8'})
   const readInterface = fileStream.pipe(csv(options))
+  .on('headers', (readHeaders) => {
+    headers = readHeaders
+  })
   const pipeline: PipelineMethod<any>[] = []
 
   function getQueryChain<T>() {
@@ -182,6 +197,10 @@ export function withCSV(csvFile: string, options?: csv.Options | readonly string
         const dataSet = await toDataset()
         return JSON.stringify(dataSet, null, space)
       },
+      async count() {
+        const final = await toDataset()
+        return final.length
+      },
       async process() {
         let idx = 0
         for await (const row of readInterface) {
@@ -194,6 +213,7 @@ export function withCSV(csvFile: string, options?: csv.Options | readonly string
   }
 
   return {
+    getHeaders,
     async get<T extends string>(columns?: T[]) {
       const queryChain = getQueryChain<Record<T, string>>()
       if (columns && columns.length > 0) {

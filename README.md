@@ -130,6 +130,8 @@ await withCSV('my.csv')
   // true
 ```
 
+**count**: returns the number of rows in the final result
+
 **process**: Executes the pipeline on all the rows, but without outputting any data. This is useful for example when your pipeline is based on `forEach` and you want to discard the final output data.
 
 ⚠️ _The following methods consume the entirety of your CSV file and the resulting output will be stored in memory. Very large files should be adequately filtered before being consumed in their entirety._
