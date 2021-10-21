@@ -3,6 +3,8 @@ import fs from 'fs'
 import pick from 'lodash.pick'
 import isEqual from 'lodash.isequal'
 import csv from 'csv-parser'
+import {Readable} from 'stream'
+import {BError} from 'berror'
 
 type ArrayMethod<T, U> = (value: T, index?: number) => U | Promise<U>
 
@@ -37,9 +39,23 @@ type CsvRowsCollection<T> = {
   process: () => Promise<void>
 }
 
-export function withCSV(csvFile: string, options?: csv.Options | readonly string[]) {
-  const fileStream = fs.createReadStream(csvFile, {encoding: 'utf-8'})
-  const readInterface = fileStream.pipe(csv(options))
+export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options | readonly string[]) {
+  let stream: fs.ReadStream | Readable | undefined = undefined
+  if (typeof csvFileOrBuffer === 'string') {
+    stream = fs.createReadStream(csvFileOrBuffer, {encoding: 'utf-8'})
+  } else if (csvFileOrBuffer instanceof Buffer) {
+    // Why Readable, _read, push(null) ? See this: https://stackoverflow.com/a/44091532
+    stream = new Readable()
+    stream._read = () => {} // noop
+    stream.push(csvFileOrBuffer)
+    stream.push(null)
+  }
+
+  if (!stream) {
+    throw new BError('Input should be a string path or a buffer', undefined, {csvFileOrBuffer})
+  }
+
+  const readInterface = stream.pipe(csv(options))
   const pipeline: PipelineMethod<any>[] = []
 
   function getQueryChain<T>() {
