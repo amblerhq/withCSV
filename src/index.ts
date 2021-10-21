@@ -52,7 +52,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options 
   }
 
   if (!stream) {
-    throw new BError('csvFileOrBuffer should be a string path or a buffer', undefined, {csvFileOrBuffer})
+    throw new BError('Input should be a string path or a buffer', undefined, {csvFileOrBuffer})
   }
 
   const readInterface = stream.pipe(csv(options))
