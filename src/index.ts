@@ -40,7 +40,7 @@ const hashCache = new Set()
 let headers: string[] | null = null
 
 function getHeaders(): Promise<string[]> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     setTimeout(() => {
       if (headers) {
         resolve(headers)
@@ -51,8 +51,7 @@ function getHeaders(): Promise<string[]> {
 
 export function withCSV(csvFile: string, options?: csv.Options | readonly string[]) {
   const fileStream = fs.createReadStream(csvFile, {encoding: 'utf-8'})
-  const readInterface = fileStream.pipe(csv(options))
-  .on('headers', (readHeaders) => {
+  const readInterface = fileStream.pipe(csv(options)).on('headers', readHeaders => {
     headers = readHeaders
   })
   const pipeline: PipelineMethod<any>[] = []

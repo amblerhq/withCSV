@@ -22,7 +22,7 @@
     "url": "https://github.com/amblerhq/withCSV.git"
   },
   "scripts": {
-    "postinstall": "yarn build",
+    "prepublish": "yarn build",
     "build": "tsc",
     "cli": "ts-node src/cli"
   },
