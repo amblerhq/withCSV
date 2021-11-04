@@ -5,6 +5,9 @@
   "description": "A CSV file manipulation library with a fluent API à la Lodash",
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "files": [
+    "build"
+  ],
   "keywords": [
     "csv",
     "stream",
@@ -22,9 +25,9 @@
     "url": "https://github.com/amblerhq/withCSV.git"
   },
   "scripts": {
-    "postinstall": "yarn build",
     "build": "tsc",
-    "test": "ts-node test/with-csv.ts"
+    "test": "ts-node test/with-csv.ts",
+    "prepare": "yarn build"
   },
   "dependencies": {
     "@types/lodash.isequal": "^4.5.5",
