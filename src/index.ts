@@ -6,23 +6,15 @@ import csv from 'csv-parser'
 import {Readable} from 'stream'
 import {BError} from 'berror'
 
-type ArrayMethod<T, U> = (value: T, index?: number) => U | Promise<U>
+export type ArrayMethod<T, U> = (value: T, index?: number) => U | Promise<U>
 
-type PipelineMethod<T> = (
-  row: T,
-  idx: number,
-) => Promise<{
-  continueChain: boolean
-  value: T
-}>
-
-const hashCache = new Set()
+type PipelineMethod<T> = (row: T, idx: number) => Promise<T>
 
 type CsvRowsCollection<T> = {
   /**
    * Chainable methods
    */
-  uniq(cb: ArrayMethod<T, string>): CsvRowsCollection<T>
+  uniq(cb?: ArrayMethod<T, any>): CsvRowsCollection<T>
   filter(cb: ArrayMethod<T, boolean>): CsvRowsCollection<T>
   map<U>(cb: ArrayMethod<T, U>): CsvRowsCollection<U>
   forEach(cb: ArrayMethod<T, void>): CsvRowsCollection<T>
@@ -30,14 +22,23 @@ type CsvRowsCollection<T> = {
   /**
    * Terminator methods
    */
-  find: (cb: ArrayMethod<T, boolean>) => Promise<T | null>
-  every: (cb: ArrayMethod<T, boolean>) => Promise<boolean>
-  some: (cb: ArrayMethod<T, boolean>) => Promise<boolean>
-  includes: (value: T) => Promise<boolean>
-  toArray: () => Promise<T[]>
-  toJSON: (space?: string | number) => Promise<string>
-  process: () => Promise<void>
+  find(cb: ArrayMethod<T, boolean>): Promise<T | null>
+  every(cb: ArrayMethod<T, boolean>): Promise<boolean>
+  some(cb: ArrayMethod<T, boolean>): Promise<boolean>
+  includes(value: T): Promise<boolean>
+  toArray(): Promise<T[]>
+  toJSON(space?: string | number): Promise<string>
+  // toCSV<U>(options?: {
+  //   filename?: U
+  //   keys?: (keyof T)[]
+  //   formatHeader?: (header: keyof T) => string
+  //   separator?: string
+  //   skipHeader?: true
+  // }): Promise<U extends string ? void : string>
+  process(): Promise<void>
 }
+
+const hashCache: Set<string> = new Set()
 
 export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options | readonly string[]) {
   let stream: fs.ReadStream | Readable | undefined = undefined
@@ -59,151 +60,140 @@ export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options 
   const pipeline: PipelineMethod<any>[] = []
 
   function getQueryChain<T>() {
-    async function applyPipeline(
-      row: T,
-      idx: number,
-    ): Promise<{
-      finishedTheChain: boolean
-      value: T
-    }> {
+    async function applyPipeline(row: T, idx: number): Promise<T> {
       let finalValue = row
       // First apply the pipeline to each row to filter/map it
-      let finishedTheChain = true
-      for (const operation of pipeline) {
-        const {continueChain, value} = await operation(finalValue, idx)
-        finalValue = value
-        if (!continueChain) {
-          return {finishedTheChain: false, value: finalValue}
+      try {
+        for (const operation of pipeline) {
+          finalValue = await operation(finalValue, idx)
         }
+        return finalValue
+      } catch (e) {
+        throw e
       }
-      return {finishedTheChain, value: finalValue}
     }
 
-    async function toDataset(): Promise<T[]> {
-      const dataSet: T[] = []
+    // This function is used to power the terminators returning a single value from performing tests on all rows (e.g. find, some, every etc...)
+    // If the predicate returns true, then the loop interrupts and valueIfFound (or the value of the row) is returned
+    // If no predicate ever returns true, then we go through all the rows and valueIfNotFound is returned
+    type Predicate = (value: T) => boolean | Promise<boolean>
+    async function checkDataset<U>(predicate: Predicate, valueIfNotFound: U, valueIfFound: U): Promise<U>
+    async function checkDataset<U>(predicate: Predicate, valueIfNotFound: U): Promise<U | T>
+    async function checkDataset<U>(predicate?: Predicate, valueIfNotFound?: U, valueIfFound?: U) {
+      hashCache.clear()
       let idx = 0
       for await (const row of readInterface) {
-        const {finishedTheChain, value} = await applyPipeline(row, idx)
-        if (finishedTheChain) {
-          dataSet.push(value)
-        }
+        try {
+          const value = await applyPipeline(row, idx)
+          console.log(predicate && (await predicate(value)))
+          if (predicate && (await predicate(value))) {
+            console.log(valueIfFound !== undefined ? valueIfFound : value)
+            return valueIfFound !== undefined ? valueIfFound : value
+          }
+        } catch (e) {}
         idx++
       }
+      return valueIfNotFound
+    }
+
+    // This function just loop through all the rows, returning the filtered final values
+    async function loopDataset(callback?: (value: T) => void | Promise<void>): Promise<void> {
+      hashCache.clear()
+      let idx = 0
+      for await (const row of readInterface) {
+        try {
+          const value = await applyPipeline(row, idx)
+          callback && (await callback(value))
+        } catch (e) {}
+        idx++
+      }
+    }
+
+    // This function just loop through all the rows, returning the filtered final values
+    async function toDataset(): Promise<T[]> {
+      const dataSet: T[] = []
+      await loopDataset(value => {
+        dataSet.push(value)
+      })
       return dataSet
     }
 
     const queryChain: CsvRowsCollection<T> = {
       /**
-       * Chainable methods
+       * Chainable methods are stacked in the pipeline and they will be run for each row
+       * They can modify the content of the row by returning a value or filter it from the dataset by throwing an error
        */
-      uniq(callback: ArrayMethod<T, string>) {
+      uniq(callback) {
         pipeline.push(async function uniq_(value: T, index: number) {
           const hash = createHash('sha1')
           const rowToHash = callback ? await callback(value, index) : value
           hash.update(JSON.stringify(rowToHash), 'utf8')
           const hashedRow = hash.digest('hex')
-          if (!hashCache.has(hashedRow)) {
-            hashCache.add(hashedRow)
-            return {continueChain: true, value}
+          if (hashCache.has(hashedRow)) {
+            throw new Error()
           }
-          return {continueChain: false, value: null}
+          hashCache.add(hashedRow)
+          return value
         })
-        hashCache.clear()
         return getQueryChain<T>()
       },
-      filter(callback: ArrayMethod<T, boolean>) {
+      filter(callback) {
         pipeline.push(async function filter_(value: T, index: number) {
-          if (await callback(value, index)) {
-            return {continueChain: true, value}
+          if (!(await callback(value, index))) {
+            throw new Error()
           }
-          return {continueChain: false, value: null}
+          return value
         })
         return getQueryChain<T>()
       },
       map<U>(callback: ArrayMethod<T, U>) {
         pipeline.push(async function map_(value: T, index: number) {
-          return {
-            continueChain: true,
-            value: await callback(value, index),
-          }
+          return await callback(value, index)
         })
         return getQueryChain<U>()
       },
-      forEach(callback: ArrayMethod<T, void>) {
+      forEach(callback) {
         pipeline.push(async function forEach_(value: T, index: number) {
           await callback(value, index)
-          return {continueChain: true, value}
+          return value
         })
         return getQueryChain<T>()
       },
       /**
        * Terminator methods
+       * For reference, the checkDataset method takes a callback with the following signature :
+       * - predicate : a function to run on all rows, returning a boolean
+       * - valueIfNotFound : returned if no row returns true with the predicate
+       * - valueIfFound : returned when a row returns true with the predicate. If not provided, the row will be returned
        */
-      async find(callback: ArrayMethod<T, boolean>) {
-        let idx = 0
-        for await (const row of readInterface) {
-          // Apply the pipeline to see if the row is filtered out
-          const {finishedTheChain, value} = await applyPipeline(row, idx)
-          // Row has finished the chain so it hasn't been filtered out,
-          // Apply the find and stop reading rows
-          if (finishedTheChain && (await callback(value))) {
-            return value
-          }
-          idx++
-        }
-        return null
+      async find(callback) {
+        console.log('find')
+        const result = await checkDataset(callback, null)
+        console.log(result)
+        return result
       },
-      async every(callback: ArrayMethod<T, boolean>) {
-        let idx = 0
-        for await (const row of readInterface) {
-          // Apply the pipeline to see if the row is filtered out
-          const {finishedTheChain, value} = await applyPipeline(row, idx)
-          if (finishedTheChain && !(await callback(value))) {
-            return false
-          }
-          idx++
-        }
-        return true
+      async every(callback) {
+        return checkDataset(async value => !(await callback(value)), true, false)
       },
-      async some(callback: ArrayMethod<T, boolean>) {
-        let idx = 0
-        for await (const row of readInterface) {
-          // Apply the pipeline to see if the row is filtered out
-          const {finishedTheChain, value} = await applyPipeline(row, idx)
-          if (finishedTheChain && (await callback(value))) {
-            return true
-          }
-          idx++
-        }
-        return false
+      async some(callback) {
+        return checkDataset(async value => await callback(value), false, true)
       },
-      async includes(searchedValue: T) {
-        let idx = 0
-        for await (const row of readInterface) {
-          // Apply the pipeline to see if the row is filtered out
-          const {finishedTheChain, value} = await applyPipeline(row, idx)
-          // Row has finished the chain so it hasn't been filtered out,
-          // Perform isEqual, stop reading rows if found
-          if (finishedTheChain && isEqual(value, searchedValue)) {
-            return true
-          }
-          idx++
-        }
-        return false
+      async includes(searchedValue) {
+        return checkDataset(async value => isEqual(value, searchedValue), false, true)
       },
       async toArray() {
         return toDataset()
       },
-      async toJSON(space?: string | number) {
+      async toJSON(space) {
         const dataSet = await toDataset()
         return JSON.stringify(dataSet, null, space)
       },
+      // async toCSV({filename, keys, formatHeader, separator, skipHeader}) {
+      //   let keys: keyof T
+      //   const keys = options?.keys ?? Object.keys(items[0])
+      // },
       async process() {
-        let idx = 0
-        for await (const row of readInterface) {
-          await applyPipeline(row, idx)
-          idx++
-        }
+        await loopDataset()
       },
     }
     return queryChain

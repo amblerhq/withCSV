@@ -24,7 +24,7 @@
   "scripts": {
     "postinstall": "yarn build",
     "build": "tsc",
-    "test": "ts-node test/with-csv.ts"
+    "test": "ts-node tests/data/convert && for test in **/*.test.ts;do echo $test; done"
   },
   "dependencies": {
     "@types/lodash.isequal": "^4.5.5",
