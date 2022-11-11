@@ -140,6 +140,15 @@ execute('Terminator methods', [
     expect(result).toEqual([{id: '3'}, {id: '4'}])
   }),
 
+  it('skip', async () => {
+    const buffer = Buffer.from(data)
+
+    const result = await withCSV(buffer).columns(['id']).skip(3)
+
+    expect(result.length).toBe(1)
+    expect(result).toEqual([{id: '4'}])
+  }),
+
   it('pick', async () => {
     const buffer = Buffer.from(data)
 

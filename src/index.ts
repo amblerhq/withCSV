@@ -37,6 +37,7 @@ type CsvRowsCollection<T> = {
   key: <U extends keyof T>(property: U, filterUndefined?: true) => Promise<T[U][]>
   first: (n: number) => Promise<T[]>
   last: (n: number) => Promise<T[]>
+  skip: (n: number) => Promise<T[]>
 }
 
 function getInterface(csvFileOrBuffer: string | Buffer, options?: csv.Options | readonly string[]) {
@@ -254,6 +255,11 @@ export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options 
       async last(limit) {
         const dataset = await toDataset()
         return dataset.slice(-1 * limit)
+      },
+
+      async skip(offset) {
+        const dataset = await toDataset()
+        return dataset.slice(offset)
       },
 
       async pick(keys) {
