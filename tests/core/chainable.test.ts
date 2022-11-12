@@ -45,14 +45,15 @@ execute('Chainable methods', [
     const buffer = Buffer.from(data)
     let count = 0
 
-    await withCSV(buffer)
+    const result = await withCSV(buffer)
       .columns(['id'])
       .forEach(() => {
         count++
       })
-      .process()
+      .rows()
 
     expect(count).toBe(4)
+    expect(result).toEqual([{id: '1'}, {id: '2'}, {id: '3'}, {id: '4'}])
   }),
 
   it('uniq with one column name', async () => {

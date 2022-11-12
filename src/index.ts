@@ -124,6 +124,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options 
       forEach(callback) {
         pipeline.push(async function forEach_(value, index) {
           await callback(value, index)
+          return value
         })
         return getQueryChain<T>()
       },

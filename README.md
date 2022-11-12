@@ -6,13 +6,13 @@
 
 📜 A fluent API similar to lodash chainable methods, treating your CSV like the array of objects it really is
 
-🏋️ A [robust parsing library based on Node streams](https://www.npmjs.com/package/csv-parser) which makes it memory-efficient by default, even on very large files
+🏋️ Based on a [robust parsing library using Node streams](https://www.npmjs.com/package/csv-parser). It is stupid fast and memory-efficient by default, for you to go crazy on large files 🪐
 
-🖋️ Smart typing which makes it a pleasure to work with in Typescript
+🖋️ Barely 300 lines of Typescript
 
 ⏳ Support for asynchronous callbacks
 
-## Getting started
+## Installing
 
 `withCSV` can be installed using your package manager of choice :
 
@@ -22,72 +22,53 @@ npm install with-csv
 yarn add with-csv
 ```
 
-You can then use it to parse and manipulate CSV files like so :
+## Usage
 
-```typescript
-import {withCSV} from 'with-csv'
-/*
-my.csv contains the following rows :
+### Example
 
+Given the following CSV file : 
+
+```csv
 id,name,phone,flag,category
 1,Joe,0612345678,true,6
 2,Jack,0698765421,false,12
 3,Mark,0645631256,true,54
-4,Jonas,0645631256,true,12
-*/
+4,Valerie,0645631256,true,12
+```
 
-withCSV('my.csv')
-  .query(['name', 'phone', 'flag'])
+```typescript
+import { withCSV } from 'with-csv'
+
+const result = await withCSV('my.csv')
+  .columns(['name', 'phone', 'flag'])
   // row (below) is automatically typed as {name: string, phone: string, flag: string}
   .filter(row => row.flag === 'true')
   .map(row => `${row.name}: ${row.phone}`)
   // value (below) has been typed as the output of .map , which is a string
   .filter(value => value.startsWith('J'))
   // At this point the CSV file hasn't yet been read
-  // It will be read by the first terminator method, in this case toArray
-  .toArray()
-  // toArray returns a promise which resolves with the content of the CSV file,
-  // as manipulated by the chained methods
-  .then(result => {
-    console.log(result)
-    // > ['Joe: 0612345678', 'Jonas: 0645631256']
-  })
-  // If any of the methods in the chain has failed, we will get the error here
-  .catch(e => {
-    console.log('ERROR', e)
-  })
+  // It will be read by the terminator method `rows` (below)
+  .rows()
+
+console.log(result)
+// [
+//   "Joe: 0612345678",
+//   "Jack: 0698765421"
+// ]
 ```
 
-## Initializing
+### Initialization
 
 **withCSV**(csvFile, options): Returns an instance of withCSV configured with the provided CSV file and options. At this stage _the CSV file is not opened yet_.
 
 - **csvFile**: The path to the CSV file
 - **options** (optional): A [csv-parse options object](https://csv.js.org/parse/options/)
 
-The `withCSV` instance exposes two methods : **get** and **query**. 
+The `withCSV` instance exposes the methods **columns** which takes as input an array of column names. This allows `withCSV` to infer the type of the rows.
 
-- **get** is used to fetch the whole file in one go, and return it as an array of objects. This can be used when you don't need to filter or manipulate the data, and are certain that it will fit in memory.
-- **query** is used for advanced manipulations such as filtering and mapping. It exposes an API modeled on the javascript Array prototype, and processes the CSV file line by line, allowing you to filter data out of very large files.
+### Querying API
 
-## Simple usage
-
-**get**(columns)
-
-- **columns**(optional): An array of strings corresponding to the headers of the columns you want to retrieve. If columns is empty, all columns are returned. In this case withCSV cannot infer the column names and you will not benefit from the smart typing features.
-
-```javascript
-const records = await withCSV('my.csv').get(['name', 'phone', 'flag'])
-  /* [
-      { name: "Joe", phone: "0612345678", flag: "true" },
-      { name: "Jack", phone: "0698765421", flag: "false" },
-      ... (all rows are returned)
-    ] */
-```
-
-## Querying API
-
-The `query` method also allows you to select columns on your file. The resulting instance exposes the querying API, which can be split in two groups :
+Once you have selected your columns, you can start manipulating your CSV data using the Querying API. It consists of two categories of methods :
 
 ⛓️ chainable methods which are stacked in a pipeline through which every row will be processed one by one
 
@@ -104,41 +85,54 @@ The only major differences are :
 
 ### ⛓️ Chainable methods
 
-**uniq**: deduplicates records from your CSV file. Rows are deduplicated by the result of the provided callback, or by the value of all columns.
+**map(callback)**: maps each record to a new shape. The output will be typed accordingly.
 
-**filter**: filters out records.
+**filter(callback)**: filters out records.
 
-**map**: maps each record to a new shape. The output will be automatically typed correctly.
+**forEach(callback)**: this is executed on each record, but doesn't alter the data of the rows.
 
-**forEach**: this is executed on each record, but doesn't actually alter the output data.
+**uniq(iterator)**: deduplicates records from your CSV file. It can accept as argument :
+
+* A column name to deduplicate on that column
+* An array of column anmes to deduplicate on the combination of those columns
+* A callback returning a string to deduplicate on the value of that string
 
 ### 🚧 Terminator methods
 
-**find**: returns the first matching record
-
-**every**: returns `true` if all records match
-
-**some**: returns `true` if at least one record matches
-
-**includes**: returns `true` if the final output contains the value passed. This uses [`lodash.isEqual`](https://lodash.com/docs/4.17.15#isEqual) so the value can be a primitive, object, array, etc...
-
-```javascript
-await withCSV('my.csv')
-  .query(['phone'])
-  .map(row => row.phone)
-  .includes('0612345678')
-  // true
-```
+_The following methods only ever consume one row at a time so they are safe to use on very large files_
 
 **process**: Executes the pipeline on all the rows, but without outputting any data. This is useful for example when your pipeline is based on `forEach` and you want to discard the final output data.
 
-⚠️ _The following methods consume the entirety of your CSV file and the resulting output will be stored in memory. Very large files should be adequately filtered before being consumed in their entirety._
+**find(callback)**: returns the first matching record
 
-**toArray**: returns the final result of the query pipeline as a javascript array.
+**findIndex(callback)**: returns the index of the first matching record
+
+**every(callback)**: returns `true` if all records match
+
+**some(callback)**: returns `true` if at least one record matches
+
+**includes(value)**: returns `true` if the final output contains the value passed. This uses [`lodash.isEqual`](https://lodash.com/docs/4.17.15#isEqual) so the value can be a primitive, object, array, etc...
+
+_The following methods consume the entirety of your CSV file and the resulting output will be stored in memory. Very large files should be adequately filtered beforehand or you may max out your machine's memory._
+
+**first(limit)**: returns the first elements of the result up to a maximum of `limit`
+
+**last(limit)**: returns the last elements of the result up to a maximum of `limit`
+
+**skip(offset)**: returns the whole result but omits the `offset` first items
+
+**pick(keys)**: picks a subset of properties from the result. `keys` is described in the [lodash.pick](https://lodash.com/docs/#pick) documentation.
+
+**key(property, filterUndefined)**: returns an array of the values of that `property` for each row. If `filterUnderfined` is true, then only defined values will be returned.
 
 **toJSON**(replacer, spaces): returns the final result of the query pipeline, as a JSON string. `replacer` and `spaces` are documented in the [JSON.stringify signature](https://developer.mozilla.org/fr/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify).
-### Wait, no reduce ?
 
-There is no significant advantage to implementing a reducer in `withCSV`, but you can use the native `reduce` method on the output of `toArray`. If you need async reduce, then may God and Bluebird have mercy on your soul !
+**rows**(): returns all the rows of the result, as an array of objects
+
+## Contributing
+
+Feel free to write us about any [bug you may find](https://github.com/amblerhq/withCSV/issues), or [submit a PR](https://github.com/amblerhq/withCSV/pulls) if you have some ideas for the library !
+
+Yes, this project does its testing with a [ghetto 40 lines Jest clone](tests/index.ts) 😎
 
 Made with 💖 @ [Ambler HQ](https://github.com/amblerhq)
