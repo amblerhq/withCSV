@@ -310,9 +310,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           return createWriteStream(csvTarget, {encoding: 'utf-8'})
         })()
 
-        // Needed because the typing for stringify is weird
         let stringifier: Stringifier | null = null
-        // !!stringifyOptions ? stringify(stringifyOptions) : stringify()
 
         let idx = 0
         for await (const row of readInterface) {
