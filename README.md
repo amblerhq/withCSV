@@ -61,7 +61,7 @@ console.log(result)
 
 **withCSV**(csvFile, options): Returns an instance of withCSV configured with the provided CSV file and options. At this stage _the CSV file is not opened yet_.
 
-- **csvFile**: The path to the CSV file
+- **csvSource**: The path to the CSV file
 - **options** (optional): A [csv-parse options object](https://github.com/mafintosh/csv-parser#options)
 
 The `withCSV` instance exposes the methods **columns** which takes as input an array of column names. This allows `withCSV` to infer the type of the rows.
@@ -86,6 +86,8 @@ The only major differences are :
 ### ⛓️ Chainable methods
 
 **map(callback)**: maps each record to a new shape. The output will be typed accordingly.
+
+**pick(keys)**: picks a subset of properties from the records. `keys` is described in the [lodash.pick](https://lodash.com/docs/#pick) documentation.
 
 **filter(callback)**: filters out records.
 
@@ -122,8 +124,6 @@ _The following methods consume the entirety of your CSV file and the resulting o
 **last(limit)**: returns the last elements of the result up to a maximum of `limit`
 
 **skip(offset)**: returns the whole result but omits the `offset` first items
-
-**pick(keys)**: picks a subset of properties from the result. `keys` is described in the [lodash.pick](https://lodash.com/docs/#pick) documentation.
 
 **key(property, filterUndefined)**: returns an array of the values of that `property` for each row. If `filterUnderfined` is true, then only defined values will be returned.
 

@@ -149,14 +149,6 @@ execute('Terminator methods', [
     expect(result).toEqual([{id: '4'}])
   }),
 
-  it('pick', async () => {
-    const buffer = Buffer.from(data)
-
-    const result = await withCSV(buffer).columns(['id', 'name']).pick('id')
-
-    expect(result).toEqual([{id: '1'}, {id: '2'}, {id: '3'}, {id: '4'}])
-  }),
-
   it('count returns n items', async () => {
     const buffer = Buffer.from(data)
 

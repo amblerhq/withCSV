@@ -21,6 +21,7 @@ type CsvRowsCollection<T> = {
   uniq<U extends keyof T>(iterator?: ArrayMethod<T, string> | U | U[]): CsvRowsCollection<T>
   filter(cb: ArrayMethod<T, boolean>): CsvRowsCollection<T>
   map<U>(cb: ArrayMethod<T, U>): CsvRowsCollection<U>
+  pick: <U extends keyof T>(keys: U | U[]) => CsvRowsCollection<Record<U, string>>
   forEach(cb: ArrayMethod<T, void>): CsvRowsCollection<T>
 
   /**
@@ -35,7 +36,6 @@ type CsvRowsCollection<T> = {
   rows: () => Promise<T[]>
   toJSON: (replacer?: (number | string)[] | null, space?: string | number) => Promise<string>
   toCSV: (csvTarget: string | WriteStream, options?: StringifyOptions) => Promise<void>
-  pick: <U extends keyof T>(keys: U | U[]) => Promise<ReturnType<typeof pick>[]>
   key: <U extends keyof T>(property: U, filterUndefined?: true) => Promise<T[U][]>
   first: (n: number) => Promise<T[]>
   last: (n: number) => Promise<T[]>
@@ -111,6 +111,13 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
       map(callback) {
         pipeline.push(async function map_(value, index) {
           return await callback(value, index)
+        })
+        return getQueryChain()
+      },
+
+      pick(keys) {
+        pipeline.push(async function map_(value) {
+          return await pick(value, keys)
         })
         return getQueryChain()
       },
@@ -267,11 +274,6 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
         return dataset.slice(offset)
       },
 
-      async pick(keys) {
-        const dataset = await toDataset()
-        return dataset.map(row => pick(row, keys))
-      },
-
       async count() {
         let idx = 0
         let count = 0
@@ -347,7 +349,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
   }
 
   return {
-    columns<T extends string>(columns: T[]) {
+    columns<T extends string>(columns: T[] | readonly T[]) {
       const queryChain = getQueryChain<Record<T, string>>()
       if (columns && columns.length > 0) {
         queryChain.map(value => pick(value, columns))
@@ -356,31 +358,3 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
     },
   }
 }
-
-// console.time('small')
-// withCSV('./small.csv')
-//   .columns(['Item', 'Total', 'Missing', 'Available'])
-//   .filter(row => row.Item.startsWith('Q') || row.Item.startsWith('P'))
-//   .map(row => ({
-//     item: row.Item,
-//     count: row.Total,
-//   }))
-//   .toCSV('./processed.csv')
-//   .then(() => {
-//     console.timeEnd('small')
-//   })
-
-// console.time('large')
-// withCSV('./large.csv')
-//   .columns(['Series_reference', 'Data_value', 'STATUS', 'UNITS'])
-//   .filter(row => row.Series_reference.startsWith('BOPQ.S06AC'))
-//   .map(row => ({
-//     ref: row.Series_reference,
-//     value: row.Data_value,
-//     status: row.STATUS,
-//     units: row.UNITS,
-//   }))
-//   .toCSV('./processed.csv')
-//   .then(() => {
-//     console.timeEnd('large')
-//   })

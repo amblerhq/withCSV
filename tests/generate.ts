@@ -24,4 +24,4 @@ export function generateCSV(name: string, length: number) {
 
 generateCSV('small', 100)
 generateCSV('medium', 100_000)
-generateCSV('large', 500_000)
+generateCSV('large', 2_000_000)

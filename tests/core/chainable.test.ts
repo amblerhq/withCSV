@@ -27,6 +27,14 @@ execute('Chainable methods', [
     expect(result).toEqual(['Joe - 23', 'Mike - 25', 'Alfred - 67', 'Marcel - 8'])
   }),
 
+  it('pick', async () => {
+    const buffer = Buffer.from(data)
+
+    const result = await withCSV(buffer).columns(['id', 'name']).pick('id').rows()
+
+    expect(result).toEqual([{id: '1'}, {id: '2'}, {id: '3'}, {id: '4'}])
+  }),
+
   it('filter', async () => {
     const buffer = Buffer.from(data)
 
