@@ -2,13 +2,15 @@
 
 > _It's like lodash for CSV files !_
 
-`withCSV` is a Node.js library to consume CSV files with clean and readable code, without sacrificing performance. It features :
+`withCSV` is a Node.js library to consume and produce CSV files with clean and readable code, without sacrificing performance. It features :
 
 📜 A fluent API similar to lodash chainable methods, treating your CSV like the array of objects it really is
 
 🏋️ Based on a [robust parsing library using Node streams](https://www.npmjs.com/package/csv-parser). It is stupid fast and memory-efficient by default, for you to go crazy on large files 🪐
 
-🖋️ Barely 300 lines of Typescript
+🖋 Equipped with a streaming [CSV stringifying library](https://csv.js.org/stringify/api/) fit for writing large volumes of data to disk
+
+⚙ Barely 300 lines of Typescript
 
 ⏳ Support for asynchronous callbacks
 
@@ -55,6 +57,13 @@ console.log(result)
 //   "Joe: 0612345678",
 //   "Jack: 0698765421"
 // ]
+
+// You can also use withCSV to produce CSV files after treatment
+await withCSV('my.csv')
+  .columns(['name', 'phone', 'flag'])
+  // row (below) is automatically typed as {name: string, phone: string, flag: string}
+  .filter(row => row.flag === 'true')
+  .toCSV('your.csv')
 ```
 
 ### Initialization
@@ -117,9 +126,14 @@ _The following methods only ever consume one row at a time so they are safe to u
 
 **count()**: returns the number of rows at the end of the pipeline
 
-_The following methods consume the entirety of your CSV file and the resulting output will be stored in memory. Very large files should be adequately filtered beforehand or you may max out your machine's memory._
-
 **first(limit)**: returns the first elements of the result up to a maximum of `limit`
+
+**toCSV(csvTarget, options)**: writes the result to a file or a stream
+  * if `csvTarget` is a string, a file at this path will be created
+  * if `csvTarget` is a WriteStream, the data will be piped directly to it
+  * `options` are documented in the [`csv-stringify` documentation page](https://csv.js.org/stringify/options/)
+
+_The following methods consume the entirety of your CSV file and the resulting output will be stored in memory. Very large files should be adequately filtered beforehand or you may max out your machine's memory._
 
 **last(limit)**: returns the last elements of the result up to a maximum of `limit`
 
@@ -131,10 +145,31 @@ _The following methods consume the entirety of your CSV file and the resulting o
 
 **rows**(): returns all the rows of the result, as an array of objects
 
-## Contributing
+## Contributing & Testing
 
 Feel free to write us about any [bug you may find](https://github.com/amblerhq/withCSV/issues), or [submit a PR](https://github.com/amblerhq/withCSV/pulls) if you have fresh ideas for the library !
 
-Yes, this project does its testing with a [ghetto 40 lines Jest clone](tests/index.ts) 😎
+This project does its testing with a [ghetto Jest clone](tests/index.ts) written in <60 lines, and which includes basic benchmarking. You can launch the test suite & benchmarking with `npm test` or `yarn test` (it should take around 1 minute).
+
+Here are the benchmark results on a decently powerful machine. Small sample contains 100 rows, medium contains 100 000 and large contains 2 000 000.
+
+```
+Benchmark Import and export : small: 12.515ms
+Benchmark Import and export : medium: 390.564ms
+Benchmark Import and export : large: 8.820s
+1 => Import and export
+Benchmark 1 map : small: 3.122s
+Benchmark 1 map : medium: 576.674ms
+Benchmark 1 map : large: 9.265s
+2 => 1 map
+Benchmark 4 chained map : small: 2.094ms
+Benchmark 4 chained map : medium: 509.942ms
+Benchmark 4 chained map : large: 11.925s
+3 => 4 chained map
+Benchmark uniq : small: 2.786ms
+Benchmark uniq : medium: 667.513ms
+Benchmark uniq : large: 15.352s
+4 => uniq
+```
 
 Made with 💖 @ [Ambler HQ](https://github.com/amblerhq)
