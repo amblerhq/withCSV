@@ -26,17 +26,24 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "for i in tests/**/*.test.ts; do ts-node \"$i\";done",
+    "fixtures:generate": "echo 'Generating Fixtures'; ts-node tests/generate.ts; echo 'Compressing Fixtures'; for i in small medium large; do tar -czvf tests/fixtures/$i.tar.gz tests/fixtures/$i.csv; done",
+    "prefixtures:unpack": "[ -f tests/fixtures/small.tar.gz ] || yarn fixtures:generate",
+    "fixtures:unpack": "echo 'Unpacking Fixtures'; for i in small medium large; do tar -xzvf tests/fixtures/$i.tar.gz; done",
+    "pretest": "[ -f tests/fixtures/small.csv ] || yarn fixtures:unpack;",
+    "posttest": "for i in tests/fixtures/*.result.csv; do rm -f $i; done",
+    "test": "echo 'Test suite'; for i in tests/**/*.test.ts; do ts-node $i; done; echo 'Benchmark suite'; for i in tests/**/*.benchmark.ts; do ts-node $i;done",
     "prepare": "yarn build"
   },
   "dependencies": {
     "csv-parser": "^3.0.0",
+    "csv-stringify": "^6.2.1",
     "lodash.isarray": "^4.0.0",
     "lodash.isequal": "^4.5.0",
     "lodash.isstring": "^4.0.1",
     "lodash.pick": "^4.4.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^7.6.0",
     "@types/lodash.isarray": "^4.0.7",
     "@types/lodash.isequal": "^4.5.6",
     "@types/lodash.isstring": "^4.0.7",

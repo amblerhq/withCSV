@@ -62,7 +62,7 @@ console.log(result)
 **withCSV**(csvFile, options): Returns an instance of withCSV configured with the provided CSV file and options. At this stage _the CSV file is not opened yet_.
 
 - **csvFile**: The path to the CSV file
-- **options** (optional): A [csv-parse options object](https://csv.js.org/parse/options/)
+- **options** (optional): A [csv-parse options object](https://github.com/mafintosh/csv-parser#options)
 
 The `withCSV` instance exposes the methods **columns** which takes as input an array of column names. This allows `withCSV` to infer the type of the rows.
 
@@ -112,6 +112,8 @@ _The following methods only ever consume one row at a time so they are safe to u
 **some(callback)**: returns `true` if at least one record matches
 
 **includes(value)**: returns `true` if the final output contains the value passed. This uses [`lodash.isEqual`](https://lodash.com/docs/4.17.15#isEqual) so the value can be a primitive, object, array, etc...
+
+**count()**: returns the number of rows at the end of the pipeline
 
 _The following methods consume the entirety of your CSV file and the resulting output will be stored in memory. Very large files should be adequately filtered beforehand or you may max out your machine's memory._
 

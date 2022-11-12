@@ -1,10 +1,11 @@
 import {createHash} from 'crypto'
-import fs from 'fs'
+import {createReadStream, createWriteStream, ReadStream, WriteStream} from 'fs'
 import pick from 'lodash.pick'
 import isEqual from 'lodash.isequal'
 import isString from 'lodash.isstring'
 import isArray from 'lodash.isarray'
 import csv from 'csv-parser'
+import {stringify, Options as StringifyOptions, Stringifier} from 'csv-stringify'
 import {Readable} from 'stream'
 
 type ArrayMethod<T, U> = (value: T, index?: number) => U | Promise<U>
@@ -33,27 +34,30 @@ type CsvRowsCollection<T> = {
   includes: (value: T) => Promise<boolean>
   rows: () => Promise<T[]>
   toJSON: (replacer?: (number | string)[] | null, space?: string | number) => Promise<string>
+  toCSV: (csvTarget: string | WriteStream, options?: StringifyOptions) => Promise<void>
   pick: <U extends keyof T>(keys: U | U[]) => Promise<ReturnType<typeof pick>[]>
   key: <U extends keyof T>(property: U, filterUndefined?: true) => Promise<T[U][]>
   first: (n: number) => Promise<T[]>
   last: (n: number) => Promise<T[]>
   skip: (n: number) => Promise<T[]>
+  count: () => Promise<number>
 }
 
-function getInterface(csvFileOrBuffer: string | Buffer, options?: csv.Options | readonly string[]) {
-  let stream: fs.ReadStream | Readable | undefined = undefined
-  if (typeof csvFileOrBuffer === 'string') {
-    stream = fs.createReadStream(csvFileOrBuffer, {encoding: 'utf-8'})
-  } else if (csvFileOrBuffer instanceof Buffer) {
-    // Why Readable, _read, push(null) ? See this: https://stackoverflow.com/a/44091532
-    stream = new Readable()
-    stream._read = () => {} // noop
-    stream.push(csvFileOrBuffer)
-    stream.push(null)
-  }
+function getInterface(csvSource: string | Buffer | ReadStream, options?: Parameters<typeof csv>[0]) {
+  const stream = (() => {
+    if (csvSource instanceof ReadStream) {
+      return csvSource
+    }
+
+    if (typeof csvSource === 'string') {
+      return createReadStream(csvSource, {encoding: 'utf-8'})
+    }
+
+    return Readable.from(csvSource)
+  })()
 
   if (!stream) {
-    throw new Error('Input should be a string path or a buffer')
+    throw new Error('Input should be a string path, a Buffer or a ReadStream')
   }
 
   return stream.pipe(csv(options))
@@ -65,7 +69,7 @@ function hashRecord(record: any) {
   return hash.digest('hex')
 }
 
-export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options | readonly string[]) {
+export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?: csv.Options | readonly string[]) {
   const readInterface = getInterface(csvFileOrBuffer, options)
   const pipeline: PipelineMethod<any>[] = []
 
@@ -118,7 +122,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options 
           }
           throw false
         })
-        return getQueryChain<T>()
+        return getQueryChain()
       },
 
       forEach(callback) {
@@ -126,7 +130,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options 
           await callback(value, index)
           return value
         })
-        return getQueryChain<T>()
+        return getQueryChain()
       },
 
       uniq(iterator) {
@@ -152,7 +156,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options 
         })
 
         hashCache.clear()
-        return getQueryChain<T>()
+        return getQueryChain()
       },
 
       /**
@@ -268,6 +272,19 @@ export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options 
         return dataset.map(row => pick(row, keys))
       },
 
+      async count() {
+        let idx = 0
+        let count = 0
+        for await (const row of readInterface) {
+          try {
+            await applyPipeline(row, idx)
+            count++
+          } catch (e) {}
+          idx++
+        }
+        return count
+      },
+
       async key(property, filterUndefined) {
         const dataset = await toDataset()
         const values = dataset.map(row => row[property])
@@ -280,6 +297,50 @@ export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options 
       async toJSON(replacer, space) {
         const dataset = await toDataset()
         return JSON.stringify(dataset, replacer, space)
+      },
+
+      async toCSV(csvTarget, stringifyOptions) {
+        const outputStream = (() => {
+          if (csvTarget instanceof WriteStream) {
+            return csvTarget
+          }
+
+          return createWriteStream(csvTarget, {encoding: 'utf-8'})
+        })()
+
+        // Needed because the typing for stringify is weird
+        let stringifier: Stringifier | null = null
+        // !!stringifyOptions ? stringify(stringifyOptions) : stringify()
+
+        let idx = 0
+        for await (const row of readInterface) {
+          try {
+            const value = await applyPipeline(row, idx)
+
+            if (!stringifier) {
+              const options: StringifyOptions = (() => {
+                if (stringifyOptions) {
+                  return stringifyOptions
+                }
+
+                return {
+                  header: true,
+                  columns: Object.keys(value as any),
+                }
+              })()
+
+              stringifier = stringify(options)
+            }
+
+            stringifier.write(Object.values(value as any))
+          } catch (e) {}
+          idx++
+        }
+
+        if (!!stringifier) {
+          stringifier.end()
+          stringifier.pipe(outputStream)
+        }
       },
     }
     return queryChain
@@ -295,3 +356,31 @@ export function withCSV(csvFileOrBuffer: string | Buffer, options?: csv.Options 
     },
   }
 }
+
+// console.time('small')
+// withCSV('./small.csv')
+//   .columns(['Item', 'Total', 'Missing', 'Available'])
+//   .filter(row => row.Item.startsWith('Q') || row.Item.startsWith('P'))
+//   .map(row => ({
+//     item: row.Item,
+//     count: row.Total,
+//   }))
+//   .toCSV('./processed.csv')
+//   .then(() => {
+//     console.timeEnd('small')
+//   })
+
+// console.time('large')
+// withCSV('./large.csv')
+//   .columns(['Series_reference', 'Data_value', 'STATUS', 'UNITS'])
+//   .filter(row => row.Series_reference.startsWith('BOPQ.S06AC'))
+//   .map(row => ({
+//     ref: row.Series_reference,
+//     value: row.Data_value,
+//     status: row.STATUS,
+//     units: row.UNITS,
+//   }))
+//   .toCSV('./processed.csv')
+//   .then(() => {
+//     console.timeEnd('large')
+//   })

@@ -157,6 +157,22 @@ execute('Terminator methods', [
     expect(result).toEqual([{id: '1'}, {id: '2'}, {id: '3'}, {id: '4'}])
   }),
 
+  it('count returns n items', async () => {
+    const buffer = Buffer.from(data)
+
+    const result = await withCSV(buffer).columns(['id']).count()
+
+    expect(result).toBe(4)
+  }),
+
+  it('count returns 0 items', async () => {
+    const buffer = Buffer.from('')
+
+    const result = await withCSV(buffer).columns(['id']).count()
+
+    expect(result).toBe(0)
+  }),
+
   it('key', async () => {
     const buffer = Buffer.from(data)
 

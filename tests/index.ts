@@ -7,6 +7,21 @@ export const it = (message: string, callback: () => Promise<void>) => {
   }
 }
 
+const benchmarks = ['small', 'medium', 'large']
+
+export const benchmark = (message: string, callback: (path: string) => Promise<void>) => {
+  return {
+    message,
+    callback: async () => {
+      for (const testCase of benchmarks) {
+        console.time(`Benchmark ${message} : ${testCase}`)
+        await callback(`tests/fixtures/${testCase}.csv`)
+        console.timeEnd(`Benchmark ${message} : ${testCase}`)
+      }
+    },
+  }
+}
+
 export async function execute(suiteMessage: string, testSuite: ReturnType<typeof it>[]) {
   let i = 0
   let success = 0

@@ -30,6 +30,11 @@
   dependencies:
     "@jridgewell/trace-mapping" "0.3.9"
 
+"@faker-js/faker@^7.6.0":
+  version "7.6.0"
+  resolved "https://registry.yarnpkg.com/@faker-js/faker/-/faker-7.6.0.tgz#9ea331766084288634a9247fcd8b84f16ff4ba07"
+  integrity sha512-XK6BTq1NDMo9Xqw/YkYyGjSsg44fbNwYRx7QK2CuoQgyy+f1rrTDHoExVM5PsyXCtfl2vs2vVJ0MN0yN6LppRw==
+
 "@jest/expect-utils@^29.3.1":
   version "29.3.1"
   resolved "https://registry.yarnpkg.com/@jest/expect-utils/-/expect-utils-29.3.1.tgz#531f737039e9b9e27c42449798acb5bba01935b6"
@@ -276,6 +281,11 @@ csv-parser@^3.0.0:
   integrity sha512-s6OYSXAK3IdKqYO33y09jhypG/bSDHPuyCme/IdEHfWpLf/jKcpitVFyOC6UemgGk8v7Q5u2XE0vvwmanxhGlQ==
   dependencies:
     minimist "^1.2.0"
+
+csv-stringify@^6.2.1:
+  version "6.2.1"
+  resolved "https://registry.yarnpkg.com/csv-stringify/-/csv-stringify-6.2.1.tgz#de4f9940abd8c9780eda41130c737a18d24e5986"
+  integrity sha512-+DT/YEgqRy82aMPMA7yUUpFJPx9X8iZy7UhfyTE2bHmFJcjDiz1j29wzTFkYTtuNVceNgz8efsjICch+O1WcLQ==
 
 diff-sequences@^29.3.1:
   version "29.3.1"
