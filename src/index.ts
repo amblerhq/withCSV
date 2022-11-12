@@ -127,7 +127,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           if (await callback(value, index)) {
             return value
           }
-          throw false
+          throw 'Filtered out'
         })
         return getQueryChain()
       },

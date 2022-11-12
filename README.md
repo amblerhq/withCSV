@@ -149,7 +149,7 @@ _The following methods consume the entirety of your CSV file and the resulting o
 
 Feel free to write us about any [bug you may find](https://github.com/amblerhq/withCSV/issues), or [submit a PR](https://github.com/amblerhq/withCSV/pulls) if you have fresh ideas for the library !
 
-This project does its testing with a [ghetto Jest clone](tests/index.ts) written in <60 lines, and which includes basic benchmarking. You can launch the test suite & benchmarking with `npm test` or `yarn test` (it should take around 1 minute).
+This project does its testing with a [ghetto Jest clone](tests/index.ts) written in <60 lines, and which includes basic benchmarking. You can launch the test suite & benchmarks with `npm test` or `yarn test` (it should take around 1 minute).
 
 Here are the benchmark results on a decently powerful machine. Small sample contains 100 rows, medium contains 100 000 and large contains 2 000 000.
 
