@@ -131,7 +131,7 @@ _The following methods consume the entirety of your CSV file and the resulting o
 
 ## Contributing
 
-Feel free to write us about any [bug you may find](https://github.com/amblerhq/withCSV/issues), or [submit a PR](https://github.com/amblerhq/withCSV/pulls) if you have some ideas for the library !
+Feel free to write us about any [bug you may find](https://github.com/amblerhq/withCSV/issues), or [submit a PR](https://github.com/amblerhq/withCSV/pulls) if you have fresh ideas for the library !
 
 Yes, this project does its testing with a [ghetto 40 lines Jest clone](tests/index.ts) 😎
 

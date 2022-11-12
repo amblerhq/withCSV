@@ -212,11 +212,6 @@ arg@^4.1.0:
   resolved "https://registry.yarnpkg.com/arg/-/arg-4.1.3.tgz#269fc7ad5b8e42cb63c896d5666017261c144089"
   integrity sha512-58S9QDqG0Xx27YwPSt9fJxivjYl432YCwfDMfZ+71RAqUrZef7LrKQZ3LHLOwCS4FLNBplP533Zx895SeOCHvA==
 
-berror@^1.1.1:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/berror/-/berror-1.1.1.tgz#107434d100e4f452e530513e1b1f6f70009b935b"
-  integrity sha512-oacHX/H18gW3RIJeeykAPPxowRUyq7vskHtkVof4pr5IeLHG5XT/OyH71sSvd1mLYy9pWMG/hXMcTLyLO2Dxww==
-
 braces@^3.0.1:
   version "3.0.2"
   resolved "https://registry.yarnpkg.com/braces/-/braces-3.0.2.tgz#3454e1a462ee8d599e236df336cd9ea4f8afe107"
