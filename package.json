@@ -1,6 +1,6 @@
 {
   "name": "with-csv",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "license": "MIT",
   "description": "A CSV file manipulation library with a fluent API à la Lodash",
   "main": "build/index.js",
@@ -26,22 +26,32 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "ts-node test/with-csv.ts",
+    "fixtures:generate": "echo 'Generating Fixtures'; ts-node tests/generate.ts; echo 'Compressing Fixtures'; for i in small medium large; do tar -czvf tests/fixtures/$i.tar.gz tests/fixtures/$i.csv; done",
+    "prefixtures:unpack": "[ -f tests/fixtures/small.tar.gz ] || yarn fixtures:generate",
+    "fixtures:unpack": "echo 'Unpacking Fixtures'; for i in small medium large; do tar -xzvf tests/fixtures/$i.tar.gz; done",
+    "pretest": "[ -f tests/fixtures/small.csv ] || yarn fixtures:unpack;",
+    "posttest": "for i in tests/fixtures/*.result.csv; do rm -f $i; done",
+    "test": "echo 'Test suite'; for i in tests/**/*.test.ts; do ts-node $i; done; echo 'Benchmark suite'; for i in tests/**/*.benchmark.ts; do ts-node $i;done",
     "prepare": "yarn build"
   },
   "dependencies": {
-    "@types/lodash.isequal": "^4.5.5",
-    "@types/lodash.pick": "^4.4.6",
-    "@types/node": "^14.14.35",
-    "berror": "^1.1.1",
     "csv-parser": "^3.0.0",
+    "csv-stringify": "^6.2.1",
+    "lodash.isarray": "^4.0.0",
     "lodash.isequal": "^4.5.0",
+    "lodash.isstring": "^4.0.1",
     "lodash.pick": "^4.4.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^7.6.0",
+    "@types/lodash.isarray": "^4.0.7",
+    "@types/lodash.isequal": "^4.5.6",
+    "@types/lodash.isstring": "^4.0.7",
+    "@types/lodash.pick": "^4.4.7",
+    "@types/node": "^18.11.9",
     "chalk": "^4.1.2",
-    "expect": "^27.3.1",
-    "ts-node": "^10.3.0",
-    "typescript": "^4.4.4"
+    "expect": "^29.3.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.8.4"
   }
 }
