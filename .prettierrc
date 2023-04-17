@@ -7,5 +7,5 @@
   "semi": false,
   "useTabs": false,
   "parser": "typescript",
-  "arrowParens": "avoid"
+  "arrowParens": "avoid",
 }
