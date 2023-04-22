@@ -6,13 +6,14 @@ import isArray from 'lodash.isarray'
 import isEqual from 'lodash.isequal'
 import isString from 'lodash.isstring'
 import pick from 'lodash.pick'
-import {applyPipeline, PipelineMethod} from './apply-pipeline'
+import {PipelineMethod} from './apply-pipeline'
 import {getInterface} from './get-interface'
 import {traverse} from './terminator'
 import {CsvRowsCollection, Predicate} from './utility-types'
 
 export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?: csv.Options | readonly string[]) {
   const readInterface = getInterface(csvFileOrBuffer, options)
+  // const pipeline: PipelineMethod<unknown>[] = []
   const instancePipeline: PipelineMethod<unknown>[] = []
 
   const hashCache = new Set()
@@ -23,7 +24,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
     return hash.digest('hex')
   }
 
-  function getQueryChain<PipelineOutput extends unknown>() {
+  function getQueryChain<PipelineOutput>() {
     const pipeline = instancePipeline as PipelineMethod<PipelineOutput>[]
 
     async function toDataset(limit = Infinity) {
@@ -46,14 +47,14 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
        */
       map(callback) {
         instancePipeline.push(async function map_(value, index) {
-          return await callback(value, index)
+          return await callback(value as PipelineOutput, index)
         })
         return getQueryChain()
       },
 
       pick(keys) {
-        pipeline.push(async function map_(value) {
-          return await pick(value, keys)
+        instancePipeline.push(async function pick_(value) {
+          return pick(value, keys)
         })
         return getQueryChain()
       },
@@ -79,11 +80,11 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
       uniq(iterator) {
         const callback = (() => {
           if (isString(iterator) || isArray(iterator)) {
-            return function uniqMap_(value: T) {
+            return function uniqMap_(value: PipelineOutput) {
               return pick(value, iterator)
             }
           }
-          return iterator as Predicate<T, string>
+          return iterator as Predicate<PipelineOutput, string>
         })()
 
         pipeline.push(async function uniq_(value, index) {
@@ -106,11 +107,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
        * Terminator methods
        */
       async process() {
-        let idx = 0
-        for await (const row of readInterface) {
-          await applyPipeline(pipeline, row, idx)
-          idx++
-        }
+        await traverse<PipelineOutput>().value({pipeline, readInterface})
       },
 
       async find(callback) {
