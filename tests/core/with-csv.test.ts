@@ -1,7 +1,7 @@
-import {withCSV} from '../../src/index'
 import expect from 'expect'
-import {execute, it} from '..'
 import {createReadStream} from 'fs'
+import {execute, it} from '..'
+import {withCSV} from '../../src/index'
 
 execute('Basic functions', [
   it('opens a CSV file from its path', async () => {
@@ -35,5 +35,34 @@ execute('Basic functions', [
     result.forEach(row => {
       expect(Object.keys(row)).toEqual(['Last Name'])
     })
+  }),
+
+  it("doesn't make errors disappear in chainables", async () => {
+    await withCSV('tests/fixtures/small.csv')
+      .columns(['First name'])
+      .map(() => {
+        throw new Error('Sike !')
+      })
+      .rows()
+      .then(() => {
+        throw new Error("We expected the command to throw but it didn't")
+      })
+      .catch(e => {
+        expect(e.message).toBe('Sike !')
+      })
+  }),
+
+  it("doesn't make errors disappear in terminators", async () => {
+    await withCSV('tests/fixtures/small.csv')
+      .columns(['First name'])
+      .find(() => {
+        throw new Error('Sike !')
+      })
+      .then(() => {
+        throw new Error("We expected the command to throw but it didn't")
+      })
+      .catch(e => {
+        expect(e.message).toBe('Sike !')
+      })
   }),
 ])

@@ -6,14 +6,14 @@ import isArray from 'lodash.isarray'
 import isEqual from 'lodash.isequal'
 import isString from 'lodash.isstring'
 import pick from 'lodash.pick'
-import {PipelineMethod} from './apply-pipeline'
-import {getInterface} from './get-interface'
-import {traverse} from './terminator'
-import {CsvRowsCollection, Predicate} from './utility-types'
+import {PipelineMethod} from './lib/apply-pipeline'
+import {traverse} from './lib/traverse'
+import {DuplicateExit, PipelineExit} from './utils/errors'
+import {getInterface} from './utils/get-interface'
+import {CsvRowsCollection, Predicate} from './utils/types'
 
 export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?: csv.Options | readonly string[]) {
   const readInterface = getInterface(csvFileOrBuffer, options)
-  // const pipeline: PipelineMethod<unknown>[] = []
   const instancePipeline: PipelineMethod<unknown>[] = []
 
   const hashCache = new Set()
@@ -64,7 +64,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           if (await callback(value, index)) {
             return value
           }
-          throw 'Filtered out'
+          throw new PipelineExit()
         })
         return getQueryChain()
       },
@@ -92,7 +92,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           const hashedRow = hashRecord(rowToHash)
 
           if (hashCache.has(hashedRow)) {
-            throw 'Duplicate'
+            throw new DuplicateExit()
           }
 
           hashCache.add(hashedRow)
@@ -238,7 +238,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
         let stringifier: Stringifier | null = null
 
         await traverse<PipelineOutput>()
-          .onRow((value, idx) => {
+          .onRow(value => {
             if (!stringifier) {
               const options: StringifyOptions = (() => {
                 if (stringifyOptions) {
