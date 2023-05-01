@@ -1,11 +1,22 @@
 import {Options as StringifyOptions} from 'csv-stringify'
 import {WriteStream} from 'fs'
 
+export type OnErrorPolicy = 'throw-first' | 'throw-all' | 'throw-none'
+
 export type Predicate<T, U> = (value: T, index: number) => U | Promise<U>
 
 export type CsvRowsCollection<PipelineOutput> = {
   /**
-   * Chainable methods
+   * Sets the policy for when a callback in the chain throws an error
+   * @param policy:
+   *   * "throw-first" will stop processing the CSV and throw on the first error
+   *   * "throw-all" will continue processing the CSV and throw an error at the end, containing all valid results and all errors encountered
+   *   * "throw-none" will ignore all errors and process as many CSV rows as possible
+   */
+  onError(policy: OnErrorPolicy): CsvRowsCollection<PipelineOutput>
+  /**
+   * Deduplicates the CSV data. By default it will stringify and
+   * @param iterator
    */
   uniq<Column extends keyof PipelineOutput>(
     iterator?: Predicate<PipelineOutput, string> | Column | Column[],

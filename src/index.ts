@@ -1,28 +1,24 @@
-import {createHash} from 'crypto'
 import csv from 'csv-parser'
 import {Options as StringifyOptions, Stringifier, stringify} from 'csv-stringify'
 import {createWriteStream, ReadStream, WriteStream} from 'fs'
 import isArray from 'lodash.isarray'
 import isEqual from 'lodash.isequal'
-import isString from 'lodash.isstring'
 import pick from 'lodash.pick'
 import {PipelineMethod} from './lib/apply-pipeline'
 import {traverse} from './lib/traverse'
 import {DuplicateExit, PipelineExit} from './utils/errors'
 import {getInterface} from './utils/get-interface'
-import {CsvRowsCollection, Predicate} from './utils/types'
+import {CsvRowsCollection, OnErrorPolicy, Predicate} from './utils/types'
 
-export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?: csv.Options | readonly string[]) {
-  const readInterface = getInterface(csvFileOrBuffer, options)
+export function withCSV(
+  csvFileOrBuffer: string | Buffer | ReadStream,
+  csvParserOptions?: csv.Options | readonly string[],
+) {
+  const readInterface = getInterface(csvFileOrBuffer, csvParserOptions)
   const instancePipeline: PipelineMethod<unknown>[] = []
+  let onErrorPolicy: OnErrorPolicy = 'throw-first'
 
-  const hashCache = new Set()
-
-  function hashRecord(record: unknown) {
-    const hash = createHash('sha1')
-    hash.update(JSON.stringify(record), 'utf8')
-    return hash.digest('hex')
-  }
+  const hashCache = new Set<string>()
 
   function getQueryChain<PipelineOutput>() {
     const pipeline = instancePipeline as PipelineMethod<PipelineOutput>[]
@@ -38,10 +34,14 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
         .exitWhen((_, idx) => idx >= maxIdx)
         .returning(() => dataSet)
         .or(() => dataSet)
-        .value({pipeline, readInterface})
+        .value({pipeline, readInterface, onErrorPolicy})
     }
 
     const queryChain: CsvRowsCollection<PipelineOutput> = {
+      onError(policy: OnErrorPolicy) {
+        onErrorPolicy = policy
+        return getQueryChain()
+      },
       /**
        * Chainable methods
        */
@@ -79,7 +79,12 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
 
       uniq(iterator) {
         const callback = (() => {
-          if (isString(iterator) || isArray(iterator)) {
+          if (typeof iterator === 'string') {
+            return function uniqMap_(value: PipelineOutput) {
+              return value[iterator]
+            }
+          }
+          if (isArray(iterator)) {
             return function uniqMap_(value: PipelineOutput) {
               return pick(value, iterator)
             }
@@ -87,19 +92,22 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           return iterator as Predicate<PipelineOutput, string>
         })()
 
+        hashCache.clear()
+
         pipeline.push(async function uniq_(value, index) {
           const rowToHash = callback ? await callback(value, index) : value
-          const hashedRow = hashRecord(rowToHash)
+          const hashedRow = JSON.stringify(rowToHash)
+          const isInCache = hashCache.has(hashedRow)
 
-          if (hashCache.has(hashedRow)) {
+          if (isInCache) {
             throw new DuplicateExit()
           }
 
           hashCache.add(hashedRow)
+
           return value
         })
 
-        hashCache.clear()
         return getQueryChain()
       },
 
@@ -107,7 +115,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
        * Terminator methods
        */
       async process() {
-        await traverse<PipelineOutput>().value({pipeline, readInterface})
+        await traverse<PipelineOutput>().value({pipeline, readInterface, onErrorPolicy})
       },
 
       async find(callback) {
@@ -116,7 +124,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           .exitWhen(({transformedValue}) => !!transformedValue)
           .returning(({originalValue}) => originalValue)
           .or(null)
-          .value({pipeline, readInterface})
+          .value({pipeline, readInterface, onErrorPolicy})
       },
 
       async findIndex(callback) {
@@ -125,7 +133,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           .exitWhen(({transformedValue}) => !!transformedValue)
           .returning((_, idx) => idx)
           .or(-1)
-          .value({pipeline, readInterface})
+          .value({pipeline, readInterface, onErrorPolicy})
       },
 
       async every(callback) {
@@ -134,7 +142,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           .exitWhen(({transformedValue}) => !transformedValue)
           .returning(false)
           .or(true)
-          .value({pipeline, readInterface})
+          .value({pipeline, readInterface, onErrorPolicy})
       },
 
       async some(callback) {
@@ -143,7 +151,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           .exitWhen(({transformedValue}) => !!transformedValue)
           .returning(true)
           .or(false)
-          .value({pipeline, readInterface})
+          .value({pipeline, readInterface, onErrorPolicy})
       },
 
       async includes(searchedValue) {
@@ -151,7 +159,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           .exitWhen(({originalValue}) => isEqual(originalValue, searchedValue))
           .returning(true)
           .or(false)
-          .value({pipeline, readInterface})
+          .value({pipeline, readInterface, onErrorPolicy})
       },
 
       async rows() {
@@ -174,7 +182,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           })
           .returning(() => subset)
           .or(() => subset)
-          .value({pipeline, readInterface})
+          .value({pipeline, readInterface, onErrorPolicy})
       },
 
       async skip(offset = 1) {
@@ -188,7 +196,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           })
           .returning(() => subset)
           .or(() => subset)
-          .value({pipeline, readInterface})
+          .value({pipeline, readInterface, onErrorPolicy})
       },
 
       async count() {
@@ -200,7 +208,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           })
           .returning(() => count)
           .or(() => count)
-          .value({pipeline, readInterface})
+          .value({pipeline, readInterface, onErrorPolicy})
       },
 
       async key(property, filterUndefined) {
@@ -218,10 +226,11 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
           })
           .returning(() => subset)
           .or(() => subset)
-          .value({pipeline, readInterface})
+          .value({pipeline, readInterface, onErrorPolicy})
       },
 
       async toJSON(replacer, space) {
+        // TODO : https://www.npmjs.com/package/streaming-json-stringify
         const dataset = await toDataset()
         return JSON.stringify(dataset, replacer, space)
       },
@@ -263,7 +272,7 @@ export function withCSV(csvFileOrBuffer: string | Buffer | ReadStream, options?:
               stringifier.pipe(outputStream)
             }
           })
-          .value({pipeline, readInterface})
+          .value({pipeline, readInterface, onErrorPolicy})
       },
     }
     return queryChain

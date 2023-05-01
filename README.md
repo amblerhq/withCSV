@@ -2,13 +2,19 @@
 
 > _It's like lodash for CSV files !_
 
-`withCSV` is a Node.js library to consume and produce CSV files with clean and readable code, without sacrificing performance. It features :
+`withCSV` is Typescript sugar that makes working with CSV files  as simple and clean as it should always have been. It is crazy fast too, as it is just a lightweight wrapper around battle-tested [parsing](https://www.npmjs.com/package/csv-parser) and [stringifying](https://csv.js.org/stringify/api) libraries. 
+
+# TODO rewrite a short text, move API doc to own document
+
+a Node.js library to consume and produce CSV files with clean and readable code, without sacrificing performance. It is basically a wrapper around 
+
+features :
 
 📜 A fluent API similar to lodash chainable methods, treating your CSV like the array of objects it really is
 
-🏋️ Based on a [robust parsing library using Node streams](https://www.npmjs.com/package/csv-parser). It is stupid fast and memory-efficient by default, for you to go crazy on large files 🪐
+🏋️ Based on a . It is stupid fast and memory-efficient by default, for you to go crazy on large files 🪐
 
-🖋 Equipped with a streaming [CSV stringifying library](https://csv.js.org/stringify/api/) fit for writing large volumes of data to disk
+🖋 Equipped with a streaming  fit for writing large volumes of data to disk
 
 ⚙ Barely 300 lines of Typescript
 
@@ -33,9 +39,9 @@ Given the following CSV file :
 ```csv
 id,name,phone,flag,category
 1,Joe,0612345678,true,6
-2,Jack,0698765421,false,12
+2,Jack,0698765421,true,12
 3,Mark,0645631256,true,54
-4,Valerie,0645631256,true,12
+4,Valerie,0645631256,false,12
 ```
 
 ```typescript
@@ -61,7 +67,6 @@ console.log(result)
 // You can also use withCSV to produce CSV files after treatment
 await withCSV('my.csv')
   .columns(['name', 'phone', 'flag'])
-  // row (below) is automatically typed as {name: string, phone: string, flag: string}
   .filter(row => row.flag === 'true')
   .toCSV('your.csv')
 ```

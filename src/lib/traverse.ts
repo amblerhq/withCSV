@@ -1,7 +1,7 @@
 import isFunction from 'lodash.isfunction'
-import {FlowControlSignal} from '../utils/errors'
+import {CSVError, FlowControlSignal, RowError} from '../utils/errors'
 import {getInterface} from '../utils/get-interface'
-import {Predicate} from '../utils/types'
+import {OnErrorPolicy, Predicate} from '../utils/types'
 import {applyPipeline, PipelineMethod} from './apply-pipeline'
 
 type TraverseChain<PipelineOutput, OnRowOutput, TerminatorOutput> = {
@@ -31,6 +31,7 @@ type TraverseBuilder<PipelineOutput, OnRowOutput = PipelineOutput, TerminatorOut
   value: (params: {
     pipeline: PipelineMethod<PipelineOutput>[]
     readInterface: ReturnType<typeof getInterface>
+    onErrorPolicy: OnErrorPolicy
   }) => Promise<TerminatorOutput>
 }
 
@@ -68,6 +69,7 @@ function buildTraverseChain<PipelineOutput, OnRowOutput, TerminatorOutput>(
     },
     async value(params) {
       let idx = 0
+      const errors: RowError[] = []
 
       for await (const row of params.readInterface) {
         try {
@@ -84,22 +86,40 @@ function buildTraverseChain<PipelineOutput, OnRowOutput, TerminatorOutput>(
           }
         } catch (e) {
           if (!(e instanceof FlowControlSignal)) {
-            throw e
+            if (params.onErrorPolicy === 'throw-first') {
+              throw e
+            }
+            if (params.onErrorPolicy === 'throw-all') {
+              errors.push({
+                idx,
+                error: (e as Error).message,
+              })
+            }
           }
         }
         idx++
       }
 
-      if (isFunction(chain.or)) {
-        return chain.or()
+      const finalResult = (() => {
+        if (isFunction(chain.or)) {
+          return chain.or()
+        }
+
+        return chain.or
+      })()
+
+      if (params.onErrorPolicy === 'throw-all') {
+        throw new CSVError(errors, finalResult)
       }
 
-      return chain.or
+      return finalResult
     },
   }
 }
 
-export function traverse<PipelineOutput>(): TraverseBuilder<PipelineOutput, PipelineOutput, PipelineOutput | null> {
+
+
+export function traverse<PipelineOutput>() {
   const defaultChain: TraverseChain<PipelineOutput, PipelineOutput, PipelineOutput | null> = {
     onRow: value => value,
     exitWhen: () => false,
