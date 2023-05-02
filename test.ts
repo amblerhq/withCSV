@@ -1,15 +1,27 @@
 import {withCSV} from './src'
 
 async function main() {
-  const test = await withCSV('./small.csv')
-    .columns(['City'])
-    .map(row => {
-      throw new Error('SIKE')
-      return row
-    })
-    .rows()
+  console.time('csv')
+  await withCSV('./tests/fixtures/large.csv')
+    .columns(['First Name', 'Last Name', 'Phone', 'City', 'Description'])
+    .map(row => ({
+      firstName: row['First Name'],
+      lastName: row['Last Name'],
+      description: row.Description,
+    }))
+    .toCSVFile('./dump.csv')
+  console.timeEnd('csv')
 
-  console.log(test)
+  console.time('json')
+  await withCSV('./tests/fixtures/large.csv')
+    .columns(['First Name', 'Last Name', 'Phone', 'City', 'Description'])
+    .map(row => ({
+      firstName: row['First Name'],
+      lastName: row['Last Name'],
+      description: row.Description,
+    }))
+    .toJSONFile('./dump.json')
+  console.timeEnd('json')
 }
 
 main().catch(e => {

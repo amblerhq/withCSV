@@ -29,9 +29,11 @@
     "fixtures:generate": "echo 'Generating Fixtures'; ts-node tests/generate.ts; echo 'Compressing Fixtures'; for i in small medium large; do tar -czvf tests/fixtures/$i.tar.gz tests/fixtures/$i.csv; done",
     "prefixtures:unpack": "[ -f tests/fixtures/small.tar.gz ] || yarn fixtures:generate",
     "fixtures:unpack": "echo 'Unpacking Fixtures'; for i in small medium large; do tar -xzvf tests/fixtures/$i.tar.gz; done",
-    "pretest": "[ -f tests/fixtures/small.csv ] || yarn fixtures:unpack;",
-    "posttest": "for i in tests/fixtures/*.result.csv; do rm -f $i; done",
-    "test": "echo 'Test suite'; for i in tests/**/*.test.ts; do ts-node $i; done; echo 'Benchmark suite'; for i in tests/**/*.benchmark.ts; do ts-node $i;done",
+    "pretest": "[ -f tests/fixtures/small.csv ] || yarn fixtures:unpack",
+    "test": "for i in tests/**/*.test.ts; do ts-node $i; done",
+    "prebenchmark": "[ -f tests/fixtures/small.csv ] || yarn fixtures:unpack",
+    "benchmark": "for i in tests/**/*.benchmark.ts; do ts-node $i;done",
+    "postbenchmark": "for i in tests/fixtures/*.result.csv; do rm -f $i; done",
     "prepare": "yarn build"
   },
   "dependencies": {
@@ -45,6 +47,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^7.6.0",
+    "@types/cli-progress": "^3.11.0",
     "@types/lodash.isarray": "^4.0.7",
     "@types/lodash.isequal": "^4.5.6",
     "@types/lodash.isfunction": "^3.0.7",
@@ -52,7 +55,9 @@
     "@types/lodash.pick": "^4.4.7",
     "@types/node": "^18.11.9",
     "chalk": "^4.1.2",
+    "cli-progress": "^3.12.0",
     "expect": "^29.3.1",
+    "ora": "^5.4.1",
     "ts-node": "^10.9.1",
     "typescript": "^4.8.4"
   }

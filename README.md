@@ -1,28 +1,14 @@
-# withCSV
+# with-csv
 
 > _It's like lodash for CSV files !_
 
-`withCSV` is Typescript sugar that makes working with CSV files  as simple and clean as it should always have been. It is crazy fast too, as it is just a lightweight wrapper around battle-tested [parsing](https://www.npmjs.com/package/csv-parser) and [stringifying](https://csv.js.org/stringify/api) libraries. 
+☕ Typescript sugar that makes working with CSV files as clean and satisfying as it should always have been. It is crazy fast too, as it is just a lightweight wrapper around battle-tested [parsing](https://www.npmjs.com/package/csv-parser) and [stringifying](https://csv.js.org/stringify/api) libraries.
 
-# TODO rewrite a short text, move API doc to own document
+💅 A fluent API à la lodash, designed to feel like you are working with a plain array of objects. It is fully-typed from end to end and accepts asynchronous callbacks, making it great for database imports and other automation jobs.
 
-a Node.js library to consume and produce CSV files with clean and readable code, without sacrificing performance. It is basically a wrapper around 
-
-features :
-
-📜 A fluent API similar to lodash chainable methods, treating your CSV like the array of objects it really is
-
-🏋️ Based on a . It is stupid fast and memory-efficient by default, for you to go crazy on large files 🪐
-
-🖋 Equipped with a streaming  fit for writing large volumes of data to disk
-
-⚙ Barely 300 lines of Typescript
-
-⏳ Support for asynchronous callbacks
+🧠 Memory efficient by default : the Stream based architecture only ever holds one CSV row in memory at a time, making it possible to work on arbitrarily large files in memory-constrained environments.
 
 ## Installing
-
-`withCSV` can be installed using your package manager of choice :
 
 ```bash
 npm install with-csv
@@ -30,9 +16,9 @@ npm install with-csv
 yarn add with-csv
 ```
 
-## Usage
+## Usage examples
 
-### Example
+[Full API documentation](API.md)
 
 Given the following CSV file : 
 
@@ -47,15 +33,11 @@ id,name,phone,flag,category
 ```typescript
 import { withCSV } from 'with-csv'
 
-const result = await withCSV('my.csv')
+const result = await withCSV('my.csv')²
   .columns(['name', 'phone', 'flag'])
-  // row (below) is automatically typed as {name: string, phone: string, flag: string}
   .filter(row => row.flag === 'true')
   .map(row => `${row.name}: ${row.phone}`)
-  // value (below) has been typed as the output of .map , which is a string
   .filter(value => value.startsWith('J'))
-  // At this point the CSV file hasn't yet been read
-  // It will be read by the terminator method `rows` (below)
   .rows()
 
 console.log(result)
@@ -63,92 +45,95 @@ console.log(result)
 //   "Joe: 0612345678",
 //   "Jack: 0698765421"
 // ]
-
-// You can also use withCSV to produce CSV files after treatment
-await withCSV('my.csv')
-  .columns(['name', 'phone', 'flag'])
-  .filter(row => row.flag === 'true')
-  .toCSV('your.csv')
 ```
 
-### Initialization
+### Database imports
 
-**withCSV**(csvFile, options): Returns an instance of withCSV configured with the provided CSV file and options. At this stage _the CSV file is not opened yet_.
+```typescript
+const count = await withCSV('user_referrals.csv')
+  .columns(['referrer_email', 'referree_email', 'signed_up'])
+  .map(row => ({
+    referrerEmail: row['referrer_email'],
+    referreeEmail: row['referree_email'],
+    signedUp: row['signed_up'] === 'true',
+  }))
+  .filter(row => row.signedUp)
+  .forEach(async row => {
+    await saveReferral({referrer: row.referrerEmail, referree: row.referreeEmail})
+  })
+  .count()
 
-- **csvSource**: The path to the CSV file
-- **options** (optional): A [csv-parse options object](https://github.com/mafintosh/csv-parser#options)
+await incrementReferreesCount(row.referrerEmail, count)
+```
 
-The `withCSV` instance exposes the methods **columns** which takes as input an array of column names. This allows `withCSV` to infer the type of the rows.
+### Outputting to file
 
-### Querying API
+```typescript
+// Filter a large file and output to another file
+await withCSV('logs_latest.csv')
+  .columns(['level', 'timestamp', 'message'])
+  .filter(row => row.level === 'ERROR')
+  .toCSVFile('errors.csv')
 
-Once you have selected your columns, you can start manipulating your CSV data using the Querying API. It consists of two categories of methods :
+// Or output as JSON
+await withCSV('logs_latest.csv')
+  .columns(['level', 'timestamp', 'message'])
+  .filter(row => row.level === 'ERROR')
+  .toJSONFile('errors.json')
+```
 
-⛓️ chainable methods which are stacked in a pipeline through which every row will be processed one by one
+### Error management
 
-🚧 terminator methods which will trigger the reading of the file, and the processing of each row through the pipeline
+You can configure how `with-csv` will behave if one of your callbacks throws an error.
 
-**Only one terminator method can be present.** It will return a promise which resolves to the output of your pipeline.
+```typescript
+// throw-early will stop reading the file and throw on the first error 
+try {
+  await withCSV('datapoints.csv', {errors: 'throw-early'})
+    .columns(['type', 'timestamp', 'value'])
+    .forEach(row => assert(row.value > 0))
+    .toCSVFile('never.csv')
+  // Here the CSV file will never be written
+} catch (e) {
+  if (e instanceof Error) {
+    console.log("Can't process the input file : " + e.message)
+  }
+}
 
-Unless otherwise specified, the methods signature are always the same as their [corresponding method in the javascript Array prototype](https://developer.mozilla.org/fr/docs/Web/JavaScript/Reference/Global_Objects/Array).
+```
 
-The only major differences are :
+```typescript
+// throw-late will continue reading rows from the CSV file, ignoring those that throw. After finishing the file it
+// will throw an error containing the idx and message of all the errors that occurred
+try {
+  await withCSV('datapoints.csv', {errors: 'throw-late'})
+    .columns(['type', 'timestamp', 'value'])
+    .forEach(row => assert(row.value > 0))
+    .toCSVFile('valid_datapoints.csv')
+  // Here the CSV file will only contain rows that haven't caused errors
+} catch (e) {
+  if (e instanceof CSVError) {
+    console.log("The following lines have issues :")
 
-- All methods in the querying API accept **asynchronous callbacks**
-- Array methods such as `filter`, `map` etc... will not receive the whole array as their last argument. This is by design as the CSV file is never held fully in memory.
+    e.errors.forEach(line => {
+      console.log(line.idx + " : " + line.error)
+    })
+  }
+}
 
-### ⛓️ Chainable methods
+```
 
-**map(callback)**: maps each record to a new shape. The output will be typed accordingly.
-
-**pick(keys)**: picks a subset of properties from the records. `keys` is described in the [lodash.pick](https://lodash.com/docs/#pick) documentation.
-
-**filter(callback)**: filters out records.
-
-**forEach(callback)**: this is executed on each record, but doesn't alter the data of the rows.
-
-**uniq(iterator)**: deduplicates records from your CSV file. It can accept as argument :
-
-* A column name to deduplicate on that column
-* An array of column anmes to deduplicate on the combination of those columns
-* A callback returning a string to deduplicate on the value of that string
-
-### 🚧 Terminator methods
-
-_The following methods only ever consume one row at a time so they are safe to use on very large files_
-
-**process**: Executes the pipeline on all the rows, but without outputting any data. This is useful for example when your pipeline is based on `forEach` and you want to discard the final output data.
-
-**find(callback)**: returns the first matching record
-
-**findIndex(callback)**: returns the index of the first matching record
-
-**every(callback)**: returns `true` if all records match
-
-**some(callback)**: returns `true` if at least one record matches
-
-**includes(value)**: returns `true` if the final output contains the value passed. This uses [`lodash.isEqual`](https://lodash.com/docs/4.17.15#isEqual) so the value can be a primitive, object, array, etc...
-
-**count()**: returns the number of rows at the end of the pipeline
-
-**first(limit)**: returns the first elements of the result up to a maximum of `limit`
-
-**toCSV(csvTarget, options)**: writes the result to a file or a stream
-  * if `csvTarget` is a string, a file at this path will be created
-  * if `csvTarget` is a WriteStream, the data will be piped directly to it
-  * `options` are documented in the [`csv-stringify` documentation page](https://csv.js.org/stringify/options/)
-
-_The following methods consume the entirety of your CSV file and the resulting output will be stored in memory. Very large files should be adequately filtered beforehand or you may max out your machine's memory._
-
-**last(limit)**: returns the last elements of the result up to a maximum of `limit`
-
-**skip(offset)**: returns the whole result but omits the `offset` first items
-
-**key(property, filterUndefined)**: returns an array of the values of that `property` for each row. If `filterUnderfined` is true, then only defined values will be returned.
-
-**toJSON**(replacer, spaces): returns the final result of the query pipeline, as a JSON string. `replacer` and `spaces` are documented in the [JSON.stringify signature](https://developer.mozilla.org/fr/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify).
-
-**rows**(): returns all the rows of the result, as an array of objects
+```typescript
+// ignore will continue reading rows from the CSV file, ignoring those that throw. After finishing the file it
+// will not throw an error.
+await withCSV('datapoints.csv', {errors: 'ignore'})
+  .columns(['type', 'timestamp', 'value'])
+  .forEach(row => assert(row.value > 0))
+  .forEach(async (row) => {
+    await saveInDatabase(row)
+  })
+  .process()
+```
 
 ## Contributing & Testing
 

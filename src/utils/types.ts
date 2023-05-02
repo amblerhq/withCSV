@@ -26,8 +26,8 @@ export type WithCSVInstance<PipelineOutput> = {
 
   rows: () => Promise<PipelineOutput[]>
   key: <U extends keyof PipelineOutput>(property: U, filterUndefined?: true) => Promise<PipelineOutput[U][]>
-  // toJSON: (replacer?: (number | string)[] | null, space?: string | number) => Promise<string>
-  toCSV: (csvTarget: string | WriteStream, options?: StringifyOptions) => Promise<void>
+  toJSONFile: (jsonTarget: string | WriteStream, stringifier?: (row: PipelineOutput) => string) => Promise<void>
+  toCSVFile: (csvTarget: string | WriteStream, options?: StringifyOptions) => Promise<void>
 
   first: (limit?: number) => Promise<PipelineOutput[]>
   last: (n: number) => Promise<PipelineOutput[]>

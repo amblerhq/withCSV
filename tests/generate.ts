@@ -14,7 +14,7 @@ export function generateCSV(name: string, length: number) {
       faker.name.lastName(),
       faker.phone.number(),
       faker.address.city(),
-      faker.hacker.adjective(),
+      faker.company.catchPhrase(),
     ])
   }
   stringifier.end()

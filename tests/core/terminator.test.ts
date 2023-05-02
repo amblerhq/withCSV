@@ -30,7 +30,6 @@ execute('Terminator methods', [
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
       .find(row => {
-        console.log(1, row, row.name === 'Mike')
         return row.name === 'Mike'
       })
 

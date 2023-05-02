@@ -1,4 +1,4 @@
-import {Options as StringifyOptions, Stringifier, stringify} from 'csv-stringify'
+import {Options as CSVStringifyOptions, Stringifier as CSVStringifier, stringify as csvStringify} from 'csv-stringify'
 import {createWriteStream, WriteStream} from 'fs'
 import isArray from 'lodash.isarray'
 import isEqual from 'lodash.isequal'
@@ -285,13 +285,41 @@ export function getInstance<PipelineOutput>({
       })
     },
 
-    // async toJSON(replacer, space) {
-    //   // TODO : https://www.npmjs.com/package/streaming-json-stringify
-    //   const dataset = await toDataset()
-    //   return JSON.stringify(dataset, replacer, space)
-    // },
+    async toJSONFile(jsonTarget, stringifier = row => JSON.stringify(row, null, 2)) {
+      const outputStream = (() => {
+        if (jsonTarget instanceof WriteStream) {
+          return jsonTarget
+        }
 
-    async toCSV(csvTarget, stringifyOptions) {
+        return createWriteStream(jsonTarget, {encoding: 'utf-8'})
+      })()
+
+      outputStream.write('[')
+      let first = true
+
+      function toJSON_(row: PipelineOutput) {
+        if (first) {
+          first = false
+        } else {
+          outputStream.write(',')
+        }
+        outputStream.write(stringifier(row))
+
+        throw new PipelineContinue()
+      }
+
+      return traversor({
+        callback: toJSON_,
+        defaultReturn: () => {
+          if (!!stringifier) {
+            outputStream.write(']')
+            outputStream.end()
+          }
+        },
+      })
+    },
+
+    async toCSVFile(csvTarget, stringifyOptions) {
       const outputStream = (() => {
         if (csvTarget instanceof WriteStream) {
           return csvTarget
@@ -300,27 +328,28 @@ export function getInstance<PipelineOutput>({
         return createWriteStream(csvTarget, {encoding: 'utf-8'})
       })()
 
-      let stringifier: Stringifier | null = null
+      let stringifier: CSVStringifier
 
       function toCSV_(row: PipelineOutput) {
-        {
-          if (!stringifier) {
-            const options: StringifyOptions = (() => {
-              if (stringifyOptions) {
-                return stringifyOptions
-              }
+        if (!stringifier) {
+          const options: CSVStringifyOptions = (() => {
+            if (stringifyOptions) {
+              return stringifyOptions
+            }
 
-              return {
-                header: true,
-                columns: Object.keys(row as any),
-              }
-            })()
+            return {
+              header: true,
+              columns: Object.keys(row as any),
+            }
+          })()
 
-            stringifier = stringify(options)
-          }
-
-          stringifier.write(Object.values(row as any))
+          stringifier = csvStringify(options)
+          stringifier.pipe(outputStream)
         }
+
+        stringifier.write(Object.values(row as any))
+
+        throw new PipelineContinue()
       }
 
       return traversor({
@@ -328,7 +357,6 @@ export function getInstance<PipelineOutput>({
         defaultReturn: () => {
           if (!!stringifier) {
             stringifier.end()
-            stringifier.pipe(outputStream)
           }
         },
       })
