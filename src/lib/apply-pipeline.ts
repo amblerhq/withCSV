@@ -1,4 +1,4 @@
-export type PipelineMethod<T> = (row: T, idx: number) => Promise<T>
+export type PipelineMethod<T> = (row: T, idx: number) => Promise<T> | T
 
 export async function applyPipeline<T>(pipeline: PipelineMethod<T>[], row: T, idx: number) {
   let value = row

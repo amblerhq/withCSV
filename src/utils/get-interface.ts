@@ -1,5 +1,5 @@
-import {ReadStream, createReadStream} from 'fs'
 import csv from 'csv-parser'
+import {createReadStream, ReadStream} from 'fs'
 import {Readable} from 'stream'
 
 export function getInterface(csvSource: string | Buffer | ReadStream, options?: Parameters<typeof csv>[0]) {

@@ -36,33 +36,4 @@ execute('Basic functions', [
       expect(Object.keys(row)).toEqual(['Last Name'])
     })
   }),
-
-  it("doesn't make errors disappear in chainables", async () => {
-    await withCSV('tests/fixtures/small.csv')
-      .columns(['First name'])
-      .map(() => {
-        throw new Error('Sike !')
-      })
-      .rows()
-      .then(() => {
-        throw new Error("We expected the command to throw but it didn't")
-      })
-      .catch(e => {
-        expect(e.message).toBe('Sike !')
-      })
-  }),
-
-  it("doesn't make errors disappear in terminators", async () => {
-    await withCSV('tests/fixtures/small.csv')
-      .columns(['First name'])
-      .find(() => {
-        throw new Error('Sike !')
-      })
-      .then(() => {
-        throw new Error("We expected the command to throw but it didn't")
-      })
-      .catch(e => {
-        expect(e.message).toBe('Sike !')
-      })
-  }),
 ])

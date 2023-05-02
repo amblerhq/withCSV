@@ -1,131 +1,72 @@
 import isFunction from 'lodash.isfunction'
-import {CSVError, FlowControlSignal, RowError} from '../utils/errors'
+import {ErrorPolicy} from '..'
+import {CSVError, RowError} from '../utils/errors'
 import {getInterface} from '../utils/get-interface'
-import {OnErrorPolicy, Predicate} from '../utils/types'
-import {applyPipeline, PipelineMethod} from './apply-pipeline'
+import {applyPipeline} from './apply-pipeline'
+import {PipelineMethod} from './get-instance'
 
-type TraverseChain<PipelineOutput, OnRowOutput, TerminatorOutput> = {
-  onRow: Predicate<PipelineOutput, OnRowOutput>
-  exitWhen: Predicate<{originalValue: PipelineOutput; transformedValue: OnRowOutput}, boolean>
-  returning:
-    | TerminatorOutput
-    | Predicate<{originalValue: PipelineOutput; transformedValue: OnRowOutput}, TerminatorOutput>
-  or: TerminatorOutput | (() => TerminatorOutput)
-}
+export function getTraversor<PipelineOutput>(options: {
+  getCSVInterface: () => ReturnType<typeof getInterface>
+  errors: ErrorPolicy
+  pipeline: [...Callbacks: PipelineMethod<unknown, unknown>[], LastCallback: PipelineMethod<unknown, PipelineOutput>]
+}) {
+  async function traversor<CallbackOutput, DefaultOutput>(traversorOptions: {
+    callback: PipelineMethod<PipelineOutput, CallbackOutput>
+    defaultReturn: DefaultOutput | (() => DefaultOutput | Promise<DefaultOutput>)
+  }): Promise<CallbackOutput | DefaultOutput>
+  async function traversor<CallbackOutput, DefaultOutput>(): Promise<undefined>
 
-type TraverseBuilder<PipelineOutput, OnRowOutput = PipelineOutput, TerminatorOutput = OnRowOutput> = {
-  onRow: <CallbackOutput>(
-    callback: Predicate<PipelineOutput, CallbackOutput>,
-  ) => TraverseBuilder<PipelineOutput, CallbackOutput, TerminatorOutput>
-  exitWhen: (
-    callback: Predicate<{originalValue: PipelineOutput; transformedValue: OnRowOutput}, boolean>,
-  ) => TraverseBuilder<PipelineOutput, OnRowOutput, TerminatorOutput>
-  returning: <CallbackOutput>(
-    callback:
-      | CallbackOutput
-      | Predicate<{originalValue: PipelineOutput; transformedValue: OnRowOutput}, CallbackOutput>,
-  ) => TraverseBuilder<PipelineOutput, OnRowOutput, CallbackOutput>
-  or: <CallbackOutput>(
-    callback: CallbackOutput | (() => CallbackOutput),
-  ) => TraverseBuilder<PipelineOutput, OnRowOutput, TerminatorOutput | CallbackOutput>
-  value: (params: {
-    pipeline: PipelineMethod<PipelineOutput>[]
-    readInterface: ReturnType<typeof getInterface>
-    onErrorPolicy: OnErrorPolicy
-  }) => Promise<TerminatorOutput>
-}
+  async function traversor<CallbackOutput, DefaultOutput>(traversorOptions?: {
+    callback: PipelineMethod<PipelineOutput, CallbackOutput>
+    defaultReturn: DefaultOutput | (() => DefaultOutput | Promise<DefaultOutput>)
+  }): Promise<CallbackOutput | DefaultOutput | undefined> {
+    let idx = 0
+    const csvErrors: RowError[] = []
 
-function buildTraverseChain<PipelineOutput, OnRowOutput, TerminatorOutput>(
-  chain: TraverseChain<PipelineOutput, OnRowOutput, TerminatorOutput>,
-): TraverseBuilder<PipelineOutput, OnRowOutput, TerminatorOutput> {
-  return {
-    onRow<CallbackOutput>(callback: Predicate<PipelineOutput, CallbackOutput>) {
-      return buildTraverseChain({
-        ...(chain as unknown as TraverseChain<PipelineOutput, CallbackOutput, TerminatorOutput>),
-        onRow: callback,
-      })
-    },
-    exitWhen(callback: Predicate<{originalValue: PipelineOutput; transformedValue: OnRowOutput}, boolean>) {
-      return buildTraverseChain({
-        ...chain,
-        exitWhen: callback,
-      })
-    },
-    returning<CallbackOutput>(
-      callback:
-        | CallbackOutput
-        | Predicate<{originalValue: PipelineOutput; transformedValue: OnRowOutput}, CallbackOutput>,
-    ) {
-      return buildTraverseChain({
-        ...(chain as unknown as TraverseChain<PipelineOutput, OnRowOutput, CallbackOutput>),
-        returning: callback,
-      })
-    },
-    or<CallbackOutput>(callback: CallbackOutput | (() => CallbackOutput)) {
-      return buildTraverseChain({
-        ...(chain as unknown as TraverseChain<PipelineOutput, OnRowOutput, TerminatorOutput | CallbackOutput>),
-        or: callback,
-      })
-    },
-    async value(params) {
-      let idx = 0
-      const errors: RowError[] = []
+    const readInterface = options.getCSVInterface()
 
-      for await (const row of params.readInterface) {
-        try {
-          const value = await applyPipeline(params.pipeline, row, idx)
+    for await (const row of readInterface) {
+      try {
+        const value = await applyPipeline(options.pipeline, row, idx)
 
-          const rowResult = await chain.onRow(value, idx)
-
-          if (await chain.exitWhen({originalValue: value, transformedValue: rowResult}, idx)) {
-            if (isFunction(chain.returning)) {
-              return chain.returning({originalValue: value, transformedValue: rowResult}, idx)
-            }
-
-            return chain.returning
+        if (!!traversorOptions?.callback) {
+          const result = await traversorOptions.callback(value, idx)
+          return result
+        }
+      } catch (e) {
+        if (e instanceof Error) {
+          if (options.errors === 'throw-early') {
+            throw e
           }
-        } catch (e) {
-          if (!(e instanceof FlowControlSignal)) {
-            if (params.onErrorPolicy === 'throw-first') {
-              throw e
-            }
-            if (params.onErrorPolicy === 'throw-all') {
-              errors.push({
-                idx,
-                error: (e as Error).message,
-              })
-            }
+          if (options.errors === 'throw-late') {
+            csvErrors.push({
+              idx,
+              error: (e as Error).message,
+            })
           }
         }
-        idx++
       }
+      idx++
+    }
 
-      const finalResult = (() => {
-        if (isFunction(chain.or)) {
-          return chain.or()
-        }
+    if (traversorOptions === undefined) {
+      return undefined
+    }
 
-        return chain.or
-      })()
+    let output: DefaultOutput
 
-      if (params.onErrorPolicy === 'throw-all') {
-        throw new CSVError(errors, finalResult)
-      }
+    if (isFunction(traversorOptions.defaultReturn)) {
+      output = await traversorOptions.defaultReturn()
+    } else {
+      output = traversorOptions.defaultReturn
+    }
 
-      return finalResult
-    },
-  }
-}
+    if (options.errors === 'throw-late' && csvErrors.length > 0) {
+      throw new CSVError(csvErrors, output)
+    }
 
-
-
-export function traverse<PipelineOutput>() {
-  const defaultChain: TraverseChain<PipelineOutput, PipelineOutput, PipelineOutput | null> = {
-    onRow: value => value,
-    exitWhen: () => false,
-    returning: ({transformedValue}) => transformedValue,
-    or: null,
+    return output
   }
 
-  return buildTraverseChain(defaultChain)
+  return traversor
 }
