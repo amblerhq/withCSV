@@ -1,7 +1,5 @@
 import {benchmark, execute} from '..'
 
-const columns = ['First Name', 'Last Name', 'Phone', 'City', 'Description'] as const
-
 execute('Basic functions', [
   benchmark('1 map', async withCSVInstance => {
     await withCSVInstance

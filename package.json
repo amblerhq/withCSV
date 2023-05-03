@@ -26,6 +26,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "fixtures:clean": "for i in tests/fixtures/*.*; do rm -f $i; done",
     "fixtures:generate": "echo 'Generating Fixtures'; ts-node tests/generate.ts; echo 'Compressing Fixtures'; for i in small medium large; do tar -czvf tests/fixtures/$i.tar.gz tests/fixtures/$i.csv; done",
     "prefixtures:unpack": "[ -f tests/fixtures/small.tar.gz ] || yarn fixtures:generate",
     "fixtures:unpack": "echo 'Unpacking Fixtures'; for i in small medium large; do tar -xzvf tests/fixtures/$i.tar.gz; done",
@@ -33,7 +34,7 @@
     "test": "for i in tests/**/*.test.ts; do ts-node $i; done",
     "prebenchmark": "[ -f tests/fixtures/small.csv ] || yarn fixtures:unpack",
     "benchmark": "for i in tests/**/*.benchmark.ts; do ts-node $i;done",
-    "postbenchmark": "for i in tests/fixtures/*.result.csv; do rm -f $i; done",
+    "postbenchmark": "for i in tests/fixtures/*.result.*; do rm -f $i; done",
     "prepare": "yarn build"
   },
   "dependencies": {

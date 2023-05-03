@@ -1,9 +1,10 @@
 import {benchmark, execute} from '..'
 
-const columns = ['First Name', 'Last Name', 'Phone', 'City', 'Description'] as const
-
-execute('To JSON', [
-  benchmark('Read and write JSON file', async (withCSVInstance, filePath) => {
-    await withCSVInstance.toCSVFile(`${filePath}.result.csv`)
+execute('JSON stream stringifier', [
+  benchmark('Default (prettified) stringifier', async (withCSVInstance, filePath) => {
+    await withCSVInstance.toJSONFile(`${filePath}.result.json`)
+  }),
+  benchmark('Basic stringifier', async (withCSVInstance, filePath) => {
+    await withCSVInstance.toJSONFile(`${filePath}.result.json`, JSON.stringify)
   }),
 ])
