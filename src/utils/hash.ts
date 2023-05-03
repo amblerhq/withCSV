@@ -1,7 +1,10 @@
 export function simpleHash(source: any) {
   const json = JSON.stringify(source)
-
   let hash = 0
+
+  if (!json?.length) {
+    return 'NIL'
+  }
 
   for (let i = 0; i < json.length; i++) {
     const char = json.charCodeAt(i)

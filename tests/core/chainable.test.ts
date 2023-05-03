@@ -69,7 +69,8 @@ execute('Chainable methods', [
 
     const result = await withCSV(buffer).columns(['id', 'name', 'age']).uniq('id').rows()
 
-    expect(result.filter(row => row.id === '1').length).toBe(1)
+    const deduplicated = result.filter(row => row.id === '1')
+    expect(deduplicated.length).toBe(1)
   }),
 
   it('uniq with n column names', async () => {
@@ -77,7 +78,9 @@ execute('Chainable methods', [
 
     const result = await withCSV(buffer).columns(['id', 'name', 'age']).uniq(['age', 'name']).rows()
 
-    expect(result.filter(row => row.age === '25' && row.name === 'Mike').length).toBe(1)
+    const deduplicated = result.filter(row => row.age === '25' && row.name === 'Mike')
+
+    expect(deduplicated.length).toBe(1)
   }),
 
   it('uniq with callback', async () => {

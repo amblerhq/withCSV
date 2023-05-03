@@ -4,11 +4,8 @@ export async function applyPipeline<T>(pipeline: PipelineMethod<T>[], row: T, id
   let value = row
 
   for (const operation of pipeline) {
-    try {
-      value = await operation(value, idx)
-    } catch (e) {
-      throw e
-    }
+    value = await operation(value, idx)
   }
+
   return value
 }
