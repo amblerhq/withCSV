@@ -58,8 +58,8 @@ execute('Error management', [
 
         if (e instanceof CSVError) {
           expect(e.errors.length).toEqual(2)
-          expect(e.errors[0].idx).toBe(2)
-          expect(e.errors[1].idx).toBe(3)
+          expect(e.errors[0].idx).toBe(3)
+          expect(e.errors[1].idx).toBe(4)
 
           const results = e.results as unknown[]
           expect(results.length).toEqual(2)

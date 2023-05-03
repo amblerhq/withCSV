@@ -104,7 +104,7 @@ export async function execute(suiteMessage: string, testSuite: ReturnType<typeof
   console.log()
   console.log(`🎩 ${chalk.green(`${success} OK`)}`)
   if (failure > 0) {
-    console.log(`🧐${chalk.red(`${failure} KO`)}`)
+    console.log(`🧐 ${chalk.red(`${failure} KO`)}`)
   }
   console.log()
 }

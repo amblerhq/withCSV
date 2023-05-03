@@ -40,7 +40,7 @@ export function getTraversor<PipelineOutput>(options: {
           }
           if (options.errors === 'throw-late') {
             csvErrors.push({
-              idx,
+              idx: idx + 1,
               error: (e as Error).message,
             })
           }

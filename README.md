@@ -6,7 +6,7 @@
 
 💅 A fluent API à la lodash, designed to feel like you are working with a plain array of objects. It is fully-typed from end to end and accepts asynchronous callbacks, making it great for database imports and other automation jobs.
 
-🧠 Memory efficient by default : the Stream based architecture only ever holds one CSV row in memory at a time, making it possible to work on arbitrarily large files in memory-constrained environments.
+🧠 Memory efficient by default : the stream based architecture only ever holds one CSV row in memory at a time, making it possible to work on arbitrarily large files in memory-constrained environments.
 
 ## Installing
 
@@ -18,7 +18,7 @@ yarn add with-csv
 
 ## Usage examples
 
-[Full API documentation](API.md)
+📜 For detailed usage see the [Full API documentation](API.md)
 
 Given the following CSV file : 
 
@@ -33,7 +33,7 @@ id,name,phone,flag,category
 ```typescript
 import { withCSV } from 'with-csv'
 
-const result = await withCSV('my.csv')²
+const result = await withCSV('my.csv')
   .columns(['name', 'phone', 'flag'])
   .filter(row => row.flag === 'true')
   .map(row => `${row.name}: ${row.phone}`)
@@ -63,7 +63,7 @@ const count = await withCSV('user_referrals.csv')
   })
   .count()
 
-await incrementReferreesCount(row.referrerEmail, count)
+await incrementReferralCounter(count)
 ```
 
 ### Outputting to file
@@ -84,7 +84,17 @@ await withCSV('logs_latest.csv')
 
 ### Error management
 
-You can configure how `with-csv` will behave if one of your callbacks throws an error.
+You can configure how `with-csv` behaves when one of your callbacks throws an error.
+
+Given the following CSV (we're interested in row 3 which has a negative value):
+
+```csv
+id,type,timestamp,flag,value
+1,measurement,1111111111,true,6
+2,measurement,1111111111,true,12
+3,input,1111111111,true,-1
+4,measurement,1111111111,false,12
+```
 
 ```typescript
 // throw-early will stop reading the file and throw on the first error 
@@ -93,7 +103,7 @@ try {
     .columns(['type', 'timestamp', 'value'])
     .forEach(row => assert(row.value > 0))
     .toCSVFile('never.csv')
-  // Here the CSV file will never be written
+    // Note that the CSV file will never be written
 } catch (e) {
   if (e instanceof Error) {
     console.log("Can't process the input file : " + e.message)
@@ -103,14 +113,14 @@ try {
 ```
 
 ```typescript
-// throw-late will continue reading rows from the CSV file, ignoring those that throw. After finishing the file it
-// will throw an error containing the idx and message of all the errors that occurred
+// throw-late will continue reading rows from the CSV file, ignoring those that throw.
+// An error will be thrown at the end of the file, exposing all the accumulated errors
 try {
   await withCSV('datapoints.csv', {errors: 'throw-late'})
     .columns(['type', 'timestamp', 'value'])
     .forEach(row => assert(row.value > 0))
     .toCSVFile('valid_datapoints.csv')
-  // Here the CSV file will only contain rows that haven't caused errors
+    // Here the CSV file will only contain those rows that haven't caused errors
 } catch (e) {
   if (e instanceof CSVError) {
     console.log("The following lines have issues :")
@@ -124,8 +134,8 @@ try {
 ```
 
 ```typescript
-// ignore will continue reading rows from the CSV file, ignoring those that throw. After finishing the file it
-// will not throw an error.
+// ignore will continue reading rows from the CSV file, ignoring those that throw.
+// After finishing the file it will not throw an error.
 await withCSV('datapoints.csv', {errors: 'ignore'})
   .columns(['type', 'timestamp', 'value'])
   .forEach(row => assert(row.value > 0))
@@ -139,7 +149,7 @@ await withCSV('datapoints.csv', {errors: 'ignore'})
 
 Feel free to write us about any [bug you may find](https://github.com/amblerhq/withCSV/issues), or [submit a PR](https://github.com/amblerhq/withCSV/pulls) if you have fresh ideas for the library !
 
-This project does its testing with a [ghetto Jest clone](tests/index.ts) written in <60 lines, and which includes basic benchmarking. You can launch the test suite & benchmarks with `npm test` or `yarn test` (it should take around 1 minute).
+You can run the tests with `yarn test` and the benchmarks with `yarn benchmark` (this will generate ~250MB of fixtures).
 
 Here are the benchmark results on a decently powerful machine. Small sample contains 100 rows, medium contains 100 000 and large contains 2 000 000.
 
