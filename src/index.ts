@@ -8,14 +8,14 @@ export type ErrorPolicy = 'ignore' | 'throw-early' | 'throw-late'
 const defaultErrorPolicy: ErrorPolicy = 'throw-late'
 
 /**
- *
- * @param source         : can be the path to the CSV file, a Buffer or a ReadStream
- * @param options        :
- * @param options.csv    : valid options for csv-parser
- * @param options.errors : how to handle one of the callbacks throwing an error :
- *                         - ignore      : continue reading CSV rows until the end of the file
- *                         - throw-early : throw on the first error caught
- *                         - throw-late  : continue reading CSV rows and throw at the end of the file
+ * Process a CSV file
+ * @param {string|Buffer|ReadStream} source can be the path to the CSV file, a Buffer or a ReadStream
+ * @param options
+ * @param {csv.Options} options.csv valid options for csv-parser
+ * @param {ErrorPolicy} options.errors how to handle one of the callbacks throwing an error :
+ * - ignore      : continue reading CSV rows until the end of the file
+ * - throw-early : throw on the first error caught
+ * - throw-late  : (default) continue reading CSV rows and throw at the end of the file
  */
 export function withCSV(
   source: string | Buffer | ReadStream,
@@ -41,7 +41,7 @@ export function withCSV(
 }
 
 async function main() {
-  const test = await withCSV('')
+  const test = await withCSV('', {errors: 'throw-early'})
     .columns(['name', 'address', 'id'])
     .map((row, idx) => ({
       nombre: row.name,

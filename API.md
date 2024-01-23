@@ -1,9 +1,29 @@
-### Initialization
+# with-csv API Documentation
 
-**withCSV**(csvFile, options): Returns an instance of withCSV configured with the provided CSV file and options. At this stage _the CSV file is not opened yet_.
+## Initialization
 
-- **csvSource**: The path to the CSV file
-- **options** (optional): A [csv-parse options object](https://github.com/mafintosh/csv-parser#options)
+First you need to open a pointer to the CSV file and optionally configure the CSV parser and error management. Then you need to specify the columns you want to pick from the CSV, which will tell Typescript how to type your rows.
+
+```typescript
+await withCSV("my_data.csv", {
+  csv: { separator: "	" },
+  errors: "throw-late"
+})
+.columns(["id", "name", "age"])
+```
+
+**withCSV**(csvFile, options):
+
+- **csvSource**: The path to the CSV file, or a Buffer or ReadStream
+- **options** (optional)
+  - **options.csv** (optional) : A [csv-parse options object](https://github.com/mafintosh/csv-parser#options)
+  - **options.errors** (optional) : how to handle one of the callbacks throwing an error (see **Error Management** below)
+
+Valid values for **options.errors** are :
+
+* **ignore**      : continue reading CSV rows until the end of the file
+* **throw-early** : throw on the first error caught
+* **throw-late**  : continue reading CSV rows and throw at the end of the file
 
 The `withCSV` instance exposes the methods **columns** which takes as input an array of column names. This allows `withCSV` to infer the type of the rows.
 
@@ -37,7 +57,7 @@ The only major differences are :
 **uniq(iterator)**: deduplicates records from your CSV file. It can accept as argument :
 
 * A column name to deduplicate on that column
-* An array of column anmes to deduplicate on the combination of those columns
+* An array of column names to deduplicate on the combination of those columns
 * A callback returning a string to deduplicate on the value of that string
 
 ### 🚧 Terminator methods

@@ -97,7 +97,7 @@ id,type,timestamp,flag,value
 ```
 
 ```typescript
-// throw-early will stop reading the file and throw on the first error 
+// throw-early will stop reading the file and throw on the first time it encounters an error 
 try {
   await withCSV('datapoints.csv', {errors: 'throw-early'})
     .columns(['type', 'timestamp', 'value'])
@@ -120,17 +120,17 @@ try {
     .columns(['type', 'timestamp', 'value'])
     .forEach(row => assert(row.value > 0))
     .toCSVFile('valid_datapoints.csv')
-    // Here the CSV file will only contain those rows that haven't caused errors
+    // Here the CSV file will be written but only containing those rows that haven't caused errors
 } catch (e) {
   if (e instanceof CSVError) {
     console.log("The following lines have issues :")
 
     e.errors.forEach(line => {
+      // The CSVError instance exposes for each error the line index and the error message
       console.log(line.idx + " : " + line.error)
     })
   }
 }
-
 ```
 
 ```typescript
@@ -151,25 +151,6 @@ Feel free to write us about any [bug you may find](https://github.com/amblerhq/w
 
 You can run the tests with `yarn test` and the benchmarks with `yarn benchmark` (this will generate ~250MB of fixtures).
 
-Here are the benchmark results on a decently powerful machine. Small sample contains 100 rows, medium contains 100 000 and large contains 2 000 000.
-
-```
-Benchmark Import and export : small: 12.515ms
-Benchmark Import and export : medium: 390.564ms
-Benchmark Import and export : large: 8.820s
-1 => Import and export
-Benchmark 1 map : small: 3.122s
-Benchmark 1 map : medium: 576.674ms
-Benchmark 1 map : large: 9.265s
-2 => 1 map
-Benchmark 4 chained map : small: 2.094ms
-Benchmark 4 chained map : medium: 509.942ms
-Benchmark 4 chained map : large: 11.925s
-3 => 4 chained map
-Benchmark uniq : small: 2.786ms
-Benchmark uniq : medium: 667.513ms
-Benchmark uniq : large: 15.352s
-4 => uniq
-```
+You can check the benchmark results [here](BENCHMARKS.md)
 
 Made with 💖 @ [Ambler HQ](https://github.com/amblerhq)

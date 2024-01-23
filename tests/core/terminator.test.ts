@@ -174,12 +174,4 @@ execute('Terminator methods', [
 
     expect(result).toEqual(['1', '2', '3', '4'])
   }),
-
-  // it('toJSON', async () => {
-  //   const buffer = Buffer.from(data)
-
-  //   const result = await withCSV(buffer).columns(['id']).toJSON()
-
-  //   expect(result).toBe(`[{"id":"1"},{"id":"2"},{"id":"3"},{"id":"4"}]`)
-  // }),
 ])

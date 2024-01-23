@@ -5,7 +5,7 @@ export type Predicate<T, U> = (value: T, index: number) => U | Promise<U>
 
 export type WithCSVInstance<PipelineOutput> = {
   uniq<Column extends keyof PipelineOutput>(
-    iterator?: Predicate<PipelineOutput, string> | Column | Column[],
+    iterator?: Predicate<PipelineOutput, unknown> | Column | Column[],
   ): WithCSVInstance<PipelineOutput>
   filter(cb: Predicate<PipelineOutput, boolean>): WithCSVInstance<PipelineOutput>
   map<CallbackOutput>(cb: Predicate<PipelineOutput, CallbackOutput>): WithCSVInstance<CallbackOutput>

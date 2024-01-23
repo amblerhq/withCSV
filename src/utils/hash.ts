@@ -1,16 +1,23 @@
 export function simpleHash(source: any) {
-  const json = JSON.stringify(source)
-  let hash = 0
+  switch (typeof source) {
+    case 'boolean':
+    case 'number':
+      return `${source}`
+    case 'string':
+      return source
+    default:
+      const json = JSON.stringify(source)
 
-  if (!json?.length) {
-    return 'NIL'
+      if (!json?.length) {
+        return 'NIL'
+      }
+
+      // this code is from https://stackoverflow.com/a/7616484/2715716
+      const hash = json.split('').reduce((a, b) => {
+        a = (a << 5) - a + b.charCodeAt(0)
+        return (a |= 0)
+      }, 0)
+
+      return hash.toString()
   }
-
-  for (let i = 0; i < json.length; i++) {
-    const char = json.charCodeAt(i)
-    hash = (hash << 5) - hash + char
-    hash &= hash // Convert to 32bit integer
-  }
-
-  return new Uint32Array([hash])[0].toString(36)
 }

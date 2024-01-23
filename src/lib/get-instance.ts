@@ -35,10 +35,6 @@ export function getInstance<PipelineOutput>({
   }
 
   return {
-    /**
-     * Maps the rows to a new shape
-     * @param callback (value, index) => {}
-     */
     map<CallbackOutput>(callback: PipelineMethod<PipelineOutput, CallbackOutput>) {
       return stack(async function map_(value, index) {
         return await callback(value, index)
