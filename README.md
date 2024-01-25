@@ -6,7 +6,7 @@
 
 💅 A fluent API à la lodash, designed to feel like you are working with a plain array of objects. It is fully-typed from end to end and accepts asynchronous callbacks, making it great for database imports and other automation jobs.
 
-🧠 Memory efficient by default : the stream based architecture only ever holds one CSV row in memory at a time, making it possible to work on arbitrarily large files in memory-constrained environments.
+🧠 Memory efficient by default : the stream based architecture doesn't need to hold the full CSV file in memory, making it possible to work on arbitrarily large files in memory-constrained environments.
 
 ## Installing
 
@@ -63,7 +63,8 @@ const count = await withCSV('user_referrals.csv')
   })
   .count()
 
-await incrementReferralCounter(count)
+// Here count will contain the number of rows that have been saved
+console.log(count)
 ```
 
 ### Outputting to file
@@ -89,18 +90,19 @@ You can configure how `with-csv` behaves when one of your callbacks throws an er
 Given the following CSV (we're interested in row 3 which has a negative value):
 
 ```csv
-id,type,timestamp,flag,value
-1,measurement,1111111111,true,6
-2,measurement,1111111111,true,12
-3,input,1111111111,true,-1
-4,measurement,1111111111,false,12
+id,value
+1,6
+2,12
+3,-1
+4,12
 ```
 
 ```typescript
 // throw-early will stop reading the file and throw on the first time it encounters an error 
 try {
   await withCSV('datapoints.csv', {errors: 'throw-early'})
-    .columns(['type', 'timestamp', 'value'])
+    .columns(['type', 'value'])
+    .filter(row => row.type === 'input')
     .forEach(row => assert(row.value > 0))
     .toCSVFile('never.csv')
     // Note that the CSV file will never be written

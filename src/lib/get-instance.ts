@@ -15,15 +15,17 @@ export type PipelineMethod<PipelineOutput, CallbackOutput> = (
   idx: number,
 ) => Promise<CallbackOutput> | CallbackOutput
 
+type GetInstanceParams<PipelineOutput> = {
+  getCSVInterface: () => ReturnType<typeof getInterface>
+  errors: ErrorPolicy
+  pipeline: [...Callbacks: PipelineMethod<unknown, unknown>[], LastCallback: PipelineMethod<unknown, PipelineOutput>]
+}
+
 export function getInstance<PipelineOutput>({
   getCSVInterface,
   errors,
   pipeline,
-}: {
-  getCSVInterface: () => ReturnType<typeof getInterface>
-  errors: ErrorPolicy
-  pipeline: [...Callbacks: PipelineMethod<unknown, unknown>[], LastCallback: PipelineMethod<unknown, PipelineOutput>]
-}): WithCSVInstance<PipelineOutput> {
+}: GetInstanceParams<PipelineOutput>): WithCSVInstance<PipelineOutput> {
   const traversor = getTraversor<PipelineOutput>({getCSVInterface, errors, pipeline})
 
   function stack<CallbackOutput>(callback: PipelineMethod<PipelineOutput, CallbackOutput>) {

@@ -7,16 +7,6 @@ import {getInterface} from './utils/get-interface'
 export type ErrorPolicy = 'ignore' | 'throw-early' | 'throw-late'
 const defaultErrorPolicy: ErrorPolicy = 'throw-late'
 
-/**
- * Process a CSV file
- * @param {string|Buffer|ReadStream} source can be the path to the CSV file, a Buffer or a ReadStream
- * @param options
- * @param {csv.Options} options.csv valid options for csv-parser
- * @param {ErrorPolicy} options.errors how to handle one of the callbacks throwing an error :
- * - ignore      : continue reading CSV rows until the end of the file
- * - throw-early : throw on the first error caught
- * - throw-late  : (default) continue reading CSV rows and throw at the end of the file
- */
 export function withCSV(
   source: string | Buffer | ReadStream,
   options?: {
@@ -40,15 +30,8 @@ export function withCSV(
   }
 }
 
-async function main() {
-  const test = await withCSV('', {errors: 'throw-early'})
-    .columns(['name', 'address', 'id'])
-    .map((row, idx) => ({
-      nombre: row.name,
-      direccion: row.address,
-      ideo: idx * 2,
-    }))
-    .pick('ideo')
-    .map(test => test)
-    .find(row => row.ideo === 2)
+export const inMemoryCSV = (headers: string[], rows: string[][]) => {
+  const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
+
+  return Buffer.from(csv)
 }

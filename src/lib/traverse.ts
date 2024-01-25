@@ -50,7 +50,7 @@ export function getTraversor<PipelineOutput>(options: {
     }
 
     if (traversorOptions === undefined) {
-      return undefined
+      return
     }
 
     let output: DefaultOutput
