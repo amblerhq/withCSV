@@ -1,68 +1,41 @@
 import { ErrorPolicy } from '..'
 import { CSVError, RowError } from '../utils/errors'
 import { getInterface } from '../utils/get-interface'
-import { applyPipeline } from './apply-pipeline'
-import { PipelineMethod } from './get-instance'
+import { applyPipeline, SKIP } from './apply-pipeline'
 
-type TraversorOptions<PipelineOutput, CallbackOutput, DefaultOutput> = {
-  callback: PipelineMethod<PipelineOutput, CallbackOutput>
-  defaultReturn: DefaultOutput | (() => DefaultOutput | Promise<DefaultOutput>)
-}
-
-export function getTraversor<PipelineOutput>(options: {
+export async function* traverseRows<PipelineOutput>(options: {
   getCSVInterface: () => ReturnType<typeof getInterface>
   errors: ErrorPolicy
-  pipeline: [...Callbacks: PipelineMethod<unknown, unknown>[], LastCallback: PipelineMethod<unknown, PipelineOutput>]
-}) {
-  async function traversor(): Promise<void>
-  async function traversor<CallbackOutput, DefaultOutput>(
-    traversorOptions: TraversorOptions<PipelineOutput, CallbackOutput, DefaultOutput>,
-  ): Promise<CallbackOutput | DefaultOutput>
+  pipeline: ((row: unknown, idx: number) => Promise<unknown> | unknown)[]
+}): AsyncGenerator<{ value: PipelineOutput; idx: number }> {
+  let idx = 0
+  const csvErrors: RowError[] = []
 
-  async function traversor<CallbackOutput, DefaultOutput>(
-    traversorOptions?: TraversorOptions<PipelineOutput, CallbackOutput, DefaultOutput>,
-  ) {
-    let idx = 0
-    const csvErrors: RowError[] = []
+  const readInterface = options.getCSVInterface()
 
-    const readInterface = options.getCSVInterface()
+  for await (const row of readInterface) {
+    try {
+      const result = await applyPipeline(options.pipeline, row, idx)
 
-    for await (const row of readInterface) {
-      try {
-        const value = (await applyPipeline(options.pipeline, row, idx)) as PipelineOutput
-
-        if (traversorOptions?.callback) {
-          const result = await traversorOptions.callback(value, idx)
-          return result
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          if (options.errors === 'throw-early') {
-            throw new CSVError([{ idx: idx + 1, error, message: error.message }])
-          }
-          if (options.errors === 'throw-late') {
-            csvErrors.push({
-              idx: idx + 1,
-              error,
-              message: error.message,
-            })
-          }
-        }
+      if (result !== SKIP) {
+        yield { value: result as PipelineOutput, idx }
       }
-      idx++
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error))
+
+      if (options.errors === 'throw-early') {
+        throw new CSVError([{ idx: idx + 1, error: err, message: err.message }])
+      }
+
+      if (options.errors === 'throw-late') {
+        csvErrors.push({ idx: idx + 1, error: err, message: err.message })
+      }
     }
 
-    const output =
-      typeof traversorOptions?.defaultReturn === 'function'
-        ? await (traversorOptions.defaultReturn as () => DefaultOutput | Promise<DefaultOutput>)()
-        : traversorOptions?.defaultReturn
-
-    if (options.errors === 'throw-late' && csvErrors.length > 0) {
-      throw new CSVError(csvErrors, output)
-    }
-
-    return output
+    idx++
   }
 
-  return traversor
+  if (options.errors === 'throw-late' && csvErrors.length > 0) {
+    throw new CSVError(csvErrors)
+  }
 }

@@ -9,7 +9,9 @@ export class CSVError extends Error {
   results: unknown
 
   constructor(rows: RowError[], results?: unknown) {
-    super('Some errors occurred while processing the CSV')
+    super(`CSV processing failed with ${rows.length} error(s)`, {
+      cause: rows.length === 1 ? rows[0].error : rows.map((r) => r.error),
+    })
     Object.setPrototypeOf(this, CSVError.prototype)
 
     this.rows = rows

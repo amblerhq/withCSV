@@ -8,6 +8,9 @@
   "files": [
     "build"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "keywords": [
     "csv",
     "stream",
@@ -31,9 +34,9 @@
     "prefixtures:unpack": "[ -f tests/fixtures/small.tar.gz ] || npm run fixtures:generate",
     "fixtures:unpack": "echo 'Unpacking Fixtures'; for i in small medium large; do tar -xzvf tests/fixtures/$i.tar.gz; done",
     "pretest": "[ -f tests/fixtures/small.csv ] || npm run fixtures:unpack",
-    "test": "for i in tests/**/*.test.ts; do ts-node $i; done",
+    "test": "find tests -name '*.test.ts' -exec ts-node {} \\;",
     "prebenchmark": "[ -f tests/fixtures/small.csv ] || npm run fixtures:unpack",
-    "benchmark": "for i in tests/**/*.benchmark.ts; do ts-node $i;done",
+    "benchmark": "find tests -name '*.benchmark.ts' -exec ts-node {} \\;",
     "postbenchmark": "for i in tests/fixtures/*.result.*; do rm -f $i; done",
     "prepare": "npm run build"
   },

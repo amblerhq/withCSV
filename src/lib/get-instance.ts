@@ -1,13 +1,14 @@
 import { Stringifier as CSVStringifier, stringify as csvStringify, Options as CSVStringifyOptions } from 'csv-stringify'
 import { createWriteStream, WriteStream } from 'fs'
 import { ErrorPolicy } from '..'
-import { deepEqual } from '../utils/deep-equal'
-import { DuplicateExit, PipelineContinue, RowExit } from '../utils/flow-control'
+import { isDeepStrictEqual } from 'node:util'
+import { CSVError } from '../utils/errors'
 import { getInterface } from '../utils/get-interface'
 import { simpleHash } from '../utils/hash'
 import { pick } from '../utils/pick'
 import { WithCSVInstance } from '../utils/types'
-import { getTraversor } from './traverse'
+import { SKIP } from './apply-pipeline'
+import { traverseRows } from './traverse'
 
 export type PipelineMethod<PipelineOutput, CallbackOutput> = (
   row: PipelineOutput,
@@ -25,7 +26,9 @@ export function getInstance<PipelineOutput>({
   errors,
   pipeline,
 }: GetInstanceParams<PipelineOutput>): WithCSVInstance<PipelineOutput> {
-  const traversor = getTraversor<PipelineOutput>({ getCSVInterface, errors, pipeline })
+  function getRows() {
+    return traverseRows<PipelineOutput>({ getCSVInterface, errors, pipeline })
+  }
 
   function stack<CallbackOutput>(callback: PipelineMethod<PipelineOutput, CallbackOutput>) {
     return getInstance({
@@ -53,10 +56,7 @@ export function getInstance<PipelineOutput>({
 
     filter(callback: PipelineMethod<PipelineOutput, boolean>) {
       return stack(async function filter_(value, index) {
-        if (await callback(value, index)) {
-          return value
-        }
-        throw new RowExit()
+        return (await callback(value, index)) ? value : (SKIP as any)
       })
     },
 
@@ -82,19 +82,20 @@ export function getInstance<PipelineOutput>({
         return iterator as PipelineMethod<PipelineOutput, string>
       })()
 
-      const seen = new Set<string>()
+      let seen = new Set<string>()
+      let initialized = false
 
-      return stack(async function forEach_(value, index) {
-        if (index === 0) {
-          seen.clear()
+      return stack(async function uniq_(value, index) {
+        if (!initialized) {
+          seen = new Set<string>()
+          initialized = true
         }
 
         const rowToHash = callback ? await callback(value, index) : value
         const hashedRow = simpleHash(rowToHash)
-        const isInCache = seen.has(hashedRow)
 
-        if (isInCache) {
-          throw new DuplicateExit()
+        if (seen.has(hashedRow)) {
+          return SKIP as any
         }
 
         seen.add(hashedRow)
@@ -104,260 +105,250 @@ export function getInstance<PipelineOutput>({
     },
 
     async process() {
-      await traversor()
+      for await (const _ of getRows()) {
+        // side effects happen in the pipeline (forEach)
+      }
     },
 
     async find(callback) {
-      async function find_(row: PipelineOutput, idx: number) {
-        if (!(await callback(row, idx))) {
-          throw new PipelineContinue()
+      for await (const { value, idx } of getRows()) {
+        if (await callback(value, idx)) {
+          return value
         }
-
-        return row
       }
 
-      return traversor({
-        callback: find_,
-        defaultReturn: null,
-      })
+      return null
     },
 
     async findIndex(callback) {
-      async function findIndex_(row: PipelineOutput, idx: number) {
-        if (!(await callback(row, idx))) {
-          throw new PipelineContinue()
+      for await (const { value, idx } of getRows()) {
+        if (await callback(value, idx)) {
+          return idx
         }
-
-        return idx
       }
 
-      return traversor({
-        callback: findIndex_,
-        defaultReturn: -1,
-      })
+      return -1
     },
 
     async every(callback) {
-      async function every_(row: PipelineOutput, idx: number) {
-        if (await callback(row, idx)) {
-          throw new PipelineContinue()
+      for await (const { value, idx } of getRows()) {
+        if (!(await callback(value, idx))) {
+          return false
         }
-
-        return false
       }
 
-      return traversor({
-        callback: every_,
-        defaultReturn: true,
-      })
+      return true
     },
 
     async some(callback) {
-      async function some_(row: PipelineOutput, idx: number) {
-        if (!(await callback(row, idx))) {
-          throw new PipelineContinue()
+      for await (const { value, idx } of getRows()) {
+        if (await callback(value, idx)) {
+          return true
         }
-
-        return true
       }
 
-      return traversor({
-        callback: some_,
-        defaultReturn: false,
-      })
+      return false
     },
 
     async includes(searchedValue) {
-      function includes_(row: PipelineOutput, idx: number) {
-        if (!deepEqual(row, searchedValue)) {
-          throw new PipelineContinue()
+      for await (const { value } of getRows()) {
+        if (isDeepStrictEqual(value, searchedValue)) {
+          return true
         }
-
-        return true
       }
 
-      return traversor({
-        callback: includes_,
-        defaultReturn: false,
-      })
+      return false
     },
 
     async rows() {
       const dataset: PipelineOutput[] = []
-      function accumulate_(row: PipelineOutput) {
-        dataset.push(row)
-        throw new PipelineContinue()
 
-        return dataset
+      try {
+        for await (const { value } of getRows()) {
+          dataset.push(value)
+        }
+      } catch (error) {
+        if (error instanceof CSVError) {
+          error.results = dataset
+          throw error
+        }
+        throw error
       }
 
-      return traversor({
-        callback: accumulate_,
-        defaultReturn: dataset,
-      })
+      return dataset
     },
 
     async first(limit = 1) {
       const subset: PipelineOutput[] = []
-      function first_(row: PipelineOutput, idx: number) {
-        if (idx < limit) {
-          subset.push(row)
-          throw new PipelineContinue()
-        }
 
-        return subset
+      for await (const { value } of getRows()) {
+        subset.push(value)
+
+        if (subset.length >= limit) {
+          break
+        }
       }
 
-      return traversor({
-        callback: first_,
-        defaultReturn: subset,
-      })
+      return subset
     },
 
     async last(limit = 1) {
       const subset: PipelineOutput[] = []
-      function last_(row: PipelineOutput, idx: number) {
-        if (subset.length >= limit) {
-          subset.shift()
+
+      try {
+        for await (const { value } of getRows()) {
+          if (subset.length >= limit) {
+            subset.shift()
+          }
+
+          subset.push(value)
         }
-
-        subset.push(row)
-        throw new PipelineContinue()
-
-        return subset
+      } catch (error) {
+        if (error instanceof CSVError) {
+          error.results = subset
+          throw error
+        }
+        throw error
       }
 
-      return traversor({
-        callback: last_,
-        defaultReturn: subset,
-      })
+      return subset
     },
 
     async skip(offset = 1) {
       const subset: PipelineOutput[] = []
-      function skip_(row: PipelineOutput, idx: number) {
-        if (idx >= offset) {
-          subset.push(row)
+
+      try {
+        for await (const { value, idx } of getRows()) {
+          if (idx >= offset) {
+            subset.push(value)
+          }
         }
-        throw new PipelineContinue()
-        return subset
+      } catch (error) {
+        if (error instanceof CSVError) {
+          error.results = subset
+          throw error
+        }
+        throw error
       }
 
-      return traversor({
-        callback: skip_,
-        defaultReturn: subset,
-      })
+      return subset
     },
 
     async count() {
       let count = 0
-      function count_() {
-        count++
-        throw new PipelineContinue()
 
-        return count
+      try {
+        for await (const _ of getRows()) {
+          count++
+        }
+      } catch (error) {
+        if (error instanceof CSVError) {
+          error.results = count
+          throw error
+        }
+        throw error
       }
 
-      return traversor({
-        callback: count_,
-        defaultReturn: () => count,
-      })
+      return count
     },
 
     async key(property, filterUndefined) {
       const subset: PipelineOutput[typeof property][] = []
-      function key_(row: PipelineOutput) {
-        const keyValue = row[property]
 
-        if (!keyValue && filterUndefined) {
-          throw new PipelineContinue()
+      try {
+        for await (const { value } of getRows()) {
+          const keyValue = value[property]
+
+          if (keyValue === undefined && filterUndefined) {
+            continue
+          }
+
+          subset.push(keyValue)
         }
-
-        subset.push(keyValue)
-        throw new PipelineContinue()
-
-        return subset
+      } catch (error) {
+        if (error instanceof CSVError) {
+          error.results = subset
+          throw error
+        }
+        throw error
       }
 
-      return traversor({
-        callback: key_,
-        defaultReturn: subset,
-      })
+      return subset
     },
 
-    async toJSONFile(jsonTarget, stringifier = row => JSON.stringify(row, null, 2)) {
-      const outputStream = (() => {
-        if (jsonTarget instanceof WriteStream) {
-          return jsonTarget
-        }
+    async toJSONFile(jsonTarget, stringifier = (row) => JSON.stringify(row, null, 2)) {
+      const outputStream =
+        jsonTarget instanceof WriteStream ? jsonTarget : createWriteStream(jsonTarget, { encoding: 'utf-8' })
 
-        return createWriteStream(jsonTarget, { encoding: 'utf-8' })
-      })()
+      function drain() {
+        return new Promise<void>((resolve) => outputStream.once('drain', resolve))
+      }
+
+      function finish() {
+        return new Promise<void>((resolve, reject) => {
+          outputStream.on('finish', resolve)
+          outputStream.on('error', reject)
+          outputStream.end()
+        })
+      }
 
       outputStream.write('[')
       let first = true
 
-      function toJSON_(row: PipelineOutput) {
-        if (first) {
-          first = false
-        } else {
-          outputStream.write(',')
+      try {
+        for await (const { value } of getRows()) {
+          let chunk = ''
+
+          if (first) {
+            first = false
+          } else {
+            chunk = ','
+          }
+
+          chunk += stringifier(value)
+
+          if (!outputStream.write(chunk)) {
+            await drain()
+          }
         }
-        outputStream.write(stringifier(row))
-
-        throw new PipelineContinue()
+      } finally {
+        outputStream.write(']')
+        await finish()
       }
-
-      return traversor({
-        callback: toJSON_,
-        defaultReturn: () => {
-          outputStream.write(']')
-          outputStream.end()
-        },
-      })
     },
 
     async toCSVFile(csvTarget, stringifyOptions) {
-      const outputStream = (() => {
-        if (csvTarget instanceof WriteStream) {
-          return csvTarget
-        }
+      const outputStream =
+        csvTarget instanceof WriteStream ? csvTarget : createWriteStream(csvTarget, { encoding: 'utf-8' })
 
-        return createWriteStream(csvTarget, { encoding: 'utf-8' })
-      })()
+      let stringifier: CSVStringifier | undefined
+      let columnOrder: string[] | undefined
 
-      let stringifier: CSVStringifier
-
-      function toCSV_(row: PipelineOutput) {
-        if (!stringifier) {
-          const options: CSVStringifyOptions = (() => {
-            if (stringifyOptions) {
-              return stringifyOptions
-            }
-
-            return {
+      try {
+        for await (const { value } of getRows()) {
+          if (!stringifier) {
+            columnOrder = Object.keys(value as any)
+            const options: CSVStringifyOptions = stringifyOptions ?? {
               header: true,
-              columns: Object.keys(row as any),
+              columns: columnOrder,
             }
-          })()
 
-          stringifier = csvStringify(options)
-          stringifier.pipe(outputStream)
-        }
-
-        stringifier.write(Object.values(row as any))
-
-        throw new PipelineContinue()
-      }
-
-      return traversor({
-        callback: toCSV_,
-        defaultReturn: () => {
-          if (stringifier) {
-            stringifier.end()
+            stringifier = csvStringify(options)
+            stringifier.pipe(outputStream)
           }
-        },
-      })
+
+          const orderedValues = columnOrder!.map((key) => (value as any)[key])
+          stringifier.write(orderedValues)
+        }
+      } finally {
+        if (stringifier) {
+          await new Promise<void>((resolve, reject) => {
+            outputStream.on('finish', resolve)
+            outputStream.on('error', reject)
+            stringifier!.end()
+          })
+        }
+      }
     },
   }
 }

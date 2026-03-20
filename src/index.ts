@@ -3,6 +3,9 @@ import { ReadStream } from 'fs'
 import { getInstance, PipelineMethod } from './lib/get-instance'
 import { getInterface } from './utils/get-interface'
 
+export { CSVError } from './utils/errors'
+export type { RowError } from './utils/errors'
+
 export type ErrorPolicy = 'ignore' | 'throw-early' | 'throw-late'
 const defaultErrorPolicy: ErrorPolicy = 'throw-late'
 
@@ -20,9 +23,9 @@ export function withCSV(
     columns<Column extends string>(columns: Column[] | readonly Column[]) {
       type BaseType = Record<string, string>
       const pickColumns = ((value: BaseType) =>
-        Object.fromEntries(columns.map(c => [c, value[c]])) as Record<Column, string>) as unknown as PipelineMethod<
+        Object.fromEntries(columns.map(c => [c, value[c]])) as Record<Column, string | undefined>) as unknown as PipelineMethod<
         unknown,
-        Record<Column, string>
+        Record<Column, string | undefined>
       >
 
       return getInstance({

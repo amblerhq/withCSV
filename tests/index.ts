@@ -24,7 +24,7 @@ const columns = ['First Name', 'Last Name', 'Phone', 'City', 'Description'] as c
 export const benchmark = (
   message: string,
   callback: (
-    withCSVInstance: WithCSVInstance<Record<(typeof columns)[number], string>>,
+    withCSVInstance: WithCSVInstance<Record<(typeof columns)[number], string | undefined>>,
     filePath: string,
   ) => Promise<void>,
 ) => {
@@ -105,6 +105,7 @@ export async function execute(suiteMessage: string, testSuite: ReturnType<typeof
   console.log(`🎩 ${chalk.green(`${success} OK`)}`)
   if (failure > 0) {
     console.log(`🧐 ${chalk.red(`${failure} KO`)}`)
+    process.exitCode = 1
   }
   console.log()
 }

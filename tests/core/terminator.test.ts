@@ -71,7 +71,7 @@ execute('Terminator methods', [
 
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
-      .every(row => parseInt(row.age) < 150)
+      .every(row => parseInt(row.age!) < 150)
 
     expect(result).toBe(true)
   }),
@@ -81,7 +81,7 @@ execute('Terminator methods', [
 
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
-      .every(row => parseInt(row.age) < 50)
+      .every(row => parseInt(row.age!) < 50)
 
     expect(result).toBe(false)
   }),
@@ -91,7 +91,7 @@ execute('Terminator methods', [
 
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
-      .some(row => parseInt(row.age) > 50)
+      .some(row => parseInt(row.age!) > 50)
 
     expect(result).toBe(true)
   }),
@@ -101,7 +101,7 @@ execute('Terminator methods', [
 
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
-      .some(row => parseInt(row.age) > 150)
+      .some(row => parseInt(row.age!) > 150)
 
     expect(result).toBe(false)
   }),

@@ -10,10 +10,10 @@ execute('Terminator operations', [
   }),
 
   benchmark('every (full traversal, boolean check)', async withCSVInstance => {
-    await withCSVInstance.every(row => row['First Name'].length > 0)
+    await withCSVInstance.every(row => row['First Name']!.length > 0)
   }),
 
   benchmark('some (early exit on first true)', async withCSVInstance => {
-    await withCSVInstance.some(row => row['City'].startsWith('Z'))
+    await withCSVInstance.some(row => row['City']!.startsWith('Z'))
   }),
 ])

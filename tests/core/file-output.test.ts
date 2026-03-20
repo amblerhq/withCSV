@@ -29,7 +29,6 @@ execute('File output methods', [
     await withCSV(csv).columns(['id', 'name']).toJSONFile(tmpJSON)
 
     // Small delay to let the stream flush
-    await new Promise(r => setTimeout(r, 50))
 
     const content = readFileSync(tmpJSON, 'utf-8')
     const parsed = JSON.parse(content)
@@ -50,7 +49,6 @@ execute('File output methods', [
       .columns(['id', 'name'])
       .toJSONFile(tmpJSON, row => JSON.stringify(row))
 
-    await new Promise(r => setTimeout(r, 50))
 
     const content = readFileSync(tmpJSON, 'utf-8')
     const parsed = JSON.parse(content)
@@ -70,7 +68,6 @@ execute('File output methods', [
     await withCSV(csv).columns(['id', 'name']).toCSVFile(tmpCSV)
 
     // Small delay to let the stream flush
-    await new Promise(r => setTimeout(r, 50))
 
     const content = readFileSync(tmpCSV, 'utf-8')
     const lines = content.trim().split('\n')
@@ -88,7 +85,6 @@ execute('File output methods', [
 
     await withCSV(csv).columns(['id', 'name', 'age']).toCSVFile(tmpCSV)
 
-    await new Promise(r => setTimeout(r, 50))
 
     const result = await withCSV(tmpCSV).columns(['id', 'name', 'age']).rows()
 
@@ -106,11 +102,10 @@ execute('File output methods', [
 
     await withCSV(csv)
       .columns(['id', 'name', 'age'])
-      .filter(row => parseInt(row.age) > 24)
-      .map(row => ({ name: row.name, age: parseInt(row.age) }))
+      .filter(row => parseInt(row.age!) > 24)
+      .map(row => ({ name: row.name!, age: parseInt(row.age!) }))
       .toJSONFile(tmpJSON)
 
-    await new Promise(r => setTimeout(r, 50))
 
     const content = readFileSync(tmpJSON, 'utf-8')
     const parsed = JSON.parse(content)

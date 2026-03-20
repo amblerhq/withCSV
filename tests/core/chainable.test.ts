@@ -32,7 +32,7 @@ execute('Chainable methods', [
   it('filter', async () => {
     const result = await withCSV(csv)
       .columns(['id', 'name', 'age'])
-      .filter(row => row.name.startsWith('M'))
+      .filter(row => row.name!.startsWith('M'))
       .rows()
 
     expect(result).toEqual([
@@ -107,7 +107,7 @@ execute('Chainable methods', [
 
     const result = await withCSV(buffer)
       .columns(['quantity1', 'quantity2'])
-      .uniq(row => parseInt(row.quantity1) + parseInt(row.quantity2))
+      .uniq(row => parseInt(row.quantity1!) + parseInt(row.quantity2!))
       .rows()
 
     expect(result.length).toBe(2)
