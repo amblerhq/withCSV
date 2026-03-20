@@ -1,6 +1,6 @@
 import csv from 'csv-parser'
-import {createReadStream, ReadStream} from 'fs'
-import {Readable} from 'stream'
+import { createReadStream, ReadStream } from 'fs'
+import { Readable } from 'stream'
 
 export function getInterface(csvSource: string | Buffer | ReadStream, options?: Parameters<typeof csv>[0]) {
   const stream = (() => {
@@ -9,7 +9,7 @@ export function getInterface(csvSource: string | Buffer | ReadStream, options?: 
     }
 
     if (typeof csvSource === 'string') {
-      return createReadStream(csvSource, {encoding: 'utf-8'})
+      return createReadStream(csvSource, { encoding: 'utf-8' })
     }
 
     return Readable.from(csvSource)

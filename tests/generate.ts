@@ -1,12 +1,12 @@
-import {faker} from '@faker-js/faker'
-import {stringify} from 'csv-stringify'
-import {createWriteStream} from 'fs'
+import { faker } from '@faker-js/faker'
+import { stringify } from 'csv-stringify'
+import { createWriteStream } from 'fs'
 
 const columns = ['First Name', 'Last Name', 'Phone', 'City', 'Description']
 
 export function generateCSV(name: string, length: number) {
   console.time(name)
-  const stringifier = stringify({header: true, columns})
+  const stringifier = stringify({ header: true, columns })
 
   for (let i = 0; i < length; i++) {
     stringifier.write([

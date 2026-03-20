@@ -1,6 +1,6 @@
 import expect from 'expect'
-import {execute, it} from '..'
-import {withCSV} from '../../src'
+import { execute, it } from '..'
+import { withCSV } from '../../src'
 
 const data = `id,name,age
 1,Joe,23
@@ -33,7 +33,7 @@ execute('Terminator methods', [
         return row.name === 'Mike'
       })
 
-    expect(result).toEqual({id: '2', name: 'Mike', age: '25'})
+    expect(result).toEqual({ id: '2', name: 'Mike', age: '25' })
   }),
 
   it('find returns null', async () => {
@@ -109,7 +109,7 @@ execute('Terminator methods', [
   it('includes returns false', async () => {
     const buffer = Buffer.from(data)
 
-    const result = await withCSV(buffer).columns(['id', 'name', 'age']).includes({id: '3', name: 'Alfred', age: '67'})
+    const result = await withCSV(buffer).columns(['id', 'name', 'age']).includes({ id: '3', name: 'Alfred', age: '67' })
 
     expect(result).toBe(true)
   }),
@@ -119,7 +119,7 @@ execute('Terminator methods', [
 
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
-      .includes({id: '666', name: 'Petyr', age: '3500'})
+      .includes({ id: '666', name: 'Petyr', age: '3500' })
 
     expect(result).toBe(false)
   }),
@@ -130,7 +130,7 @@ execute('Terminator methods', [
     const result = await withCSV(buffer).columns(['id']).first(2)
 
     expect(result.length).toBe(2)
-    expect(result).toEqual([{id: '1'}, {id: '2'}])
+    expect(result).toEqual([{ id: '1' }, { id: '2' }])
   }),
 
   it('last', async () => {
@@ -139,7 +139,7 @@ execute('Terminator methods', [
     const result = await withCSV(buffer).columns(['id']).last(2)
 
     expect(result.length).toBe(2)
-    expect(result).toEqual([{id: '3'}, {id: '4'}])
+    expect(result).toEqual([{ id: '3' }, { id: '4' }])
   }),
 
   it('skip', async () => {
@@ -148,7 +148,7 @@ execute('Terminator methods', [
     const result = await withCSV(buffer).columns(['id']).skip(3)
 
     expect(result.length).toBe(1)
-    expect(result).toEqual([{id: '4'}])
+    expect(result).toEqual([{ id: '4' }])
   }),
 
   it('count returns n items', async () => {

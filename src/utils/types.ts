@@ -1,5 +1,5 @@
-import {Options as StringifyOptions} from 'csv-stringify'
-import {WriteStream} from 'fs'
+import { Options as StringifyOptions } from 'csv-stringify'
+import { WriteStream } from 'fs'
 
 export type Predicate<T, U> = (value: T, index: number) => U | Promise<U>
 

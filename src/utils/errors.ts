@@ -1,17 +1,18 @@
 export type RowError = {
   idx: number
-  error: string
+  error: Error
+  message?: string
 }
 
 export class CSVError extends Error {
-  errors: RowError[]
+  rows: RowError[]
   results: unknown
 
-  constructor(errors: RowError[], results: unknown) {
+  constructor(rows: RowError[], results?: unknown) {
     super('Some errors occurred while processing the CSV')
     Object.setPrototypeOf(this, CSVError.prototype)
 
-    this.errors = errors
+    this.rows = rows
     this.results = results
   }
 }

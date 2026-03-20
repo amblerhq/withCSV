@@ -1,7 +1,7 @@
 import expect from 'expect'
-import {createReadStream} from 'fs'
-import {execute, it} from '..'
-import {withCSV} from '../../src/index'
+import { createReadStream } from 'fs'
+import { execute, it } from '..'
+import { withCSV } from '../../src/index'
 
 execute('Basic functions', [
   it('opens a CSV file from its path', async () => {
@@ -16,13 +16,13 @@ execute('Basic functions', [
     const result = await withCSV(buffer).columns(['Foo', 'Bar']).rows()
 
     expect(result).toEqual([
-      {Foo: '1', Bar: '2'},
-      {Foo: '3', Bar: '4'},
+      { Foo: '1', Bar: '2' },
+      { Foo: '3', Bar: '4' },
     ])
   }),
 
   it('takes a stream as input', async () => {
-    const stream = createReadStream('tests/fixtures/small.csv', {encoding: 'utf-8'})
+    const stream = createReadStream('tests/fixtures/small.csv', { encoding: 'utf-8' })
 
     const result = await withCSV(stream).columns(['First name']).rows()
 

@@ -1,14 +1,13 @@
-import {Options as CSVStringifyOptions, Stringifier as CSVStringifier, stringify as csvStringify} from 'csv-stringify'
-import {createWriteStream, WriteStream} from 'fs'
-import isArray from 'lodash.isarray'
-import isEqual from 'lodash.isequal'
-import pick from 'lodash.pick'
-import {ErrorPolicy} from '..'
-import {DuplicateExit, PipelineContinue, RowExit} from '../utils/flow-control'
-import {getInterface} from '../utils/get-interface'
-import {simpleHash} from '../utils/hash'
-import {WithCSVInstance} from '../utils/types'
-import {getTraversor} from './traverse'
+import { Stringifier as CSVStringifier, stringify as csvStringify, Options as CSVStringifyOptions } from 'csv-stringify'
+import { createWriteStream, WriteStream } from 'fs'
+import { ErrorPolicy } from '..'
+import { deepEqual } from '../utils/deep-equal'
+import { DuplicateExit, PipelineContinue, RowExit } from '../utils/flow-control'
+import { getInterface } from '../utils/get-interface'
+import { simpleHash } from '../utils/hash'
+import { pick } from '../utils/pick'
+import { WithCSVInstance } from '../utils/types'
+import { getTraversor } from './traverse'
 
 export type PipelineMethod<PipelineOutput, CallbackOutput> = (
   row: PipelineOutput,
@@ -26,7 +25,7 @@ export function getInstance<PipelineOutput>({
   errors,
   pipeline,
 }: GetInstanceParams<PipelineOutput>): WithCSVInstance<PipelineOutput> {
-  const traversor = getTraversor<PipelineOutput>({getCSVInterface, errors, pipeline})
+  const traversor = getTraversor<PipelineOutput>({ getCSVInterface, errors, pipeline })
 
   function stack<CallbackOutput>(callback: PipelineMethod<PipelineOutput, CallbackOutput>) {
     return getInstance({
@@ -45,7 +44,10 @@ export function getInstance<PipelineOutput>({
 
     pick<Column extends keyof PipelineOutput>(keys: Column | Column[]) {
       return stack(async function pick_(value) {
-        return pick(value, keys) as Record<Column, PipelineOutput[Column]>
+        return pick(value as Record<string, unknown>, keys as string | string[]) as Record<
+          Column,
+          PipelineOutput[Column]
+        >
       })
     },
 
@@ -72,9 +74,9 @@ export function getInstance<PipelineOutput>({
             return value[iterator]
           }
         }
-        if (isArray(iterator)) {
+        if (Array.isArray(iterator)) {
           return function uniqMap_(value: PipelineOutput) {
-            return pick(value, iterator)
+            return pick(value as Record<string, unknown>, iterator as string[])
           }
         }
         return iterator as PipelineMethod<PipelineOutput, string>
@@ -167,7 +169,7 @@ export function getInstance<PipelineOutput>({
 
     async includes(searchedValue) {
       function includes_(row: PipelineOutput, idx: number) {
-        if (!isEqual(row, searchedValue)) {
+        if (!deepEqual(row, searchedValue)) {
           throw new PipelineContinue()
         }
 
@@ -289,7 +291,7 @@ export function getInstance<PipelineOutput>({
           return jsonTarget
         }
 
-        return createWriteStream(jsonTarget, {encoding: 'utf-8'})
+        return createWriteStream(jsonTarget, { encoding: 'utf-8' })
       })()
 
       outputStream.write('[')
@@ -309,10 +311,8 @@ export function getInstance<PipelineOutput>({
       return traversor({
         callback: toJSON_,
         defaultReturn: () => {
-          if (!!stringifier) {
-            outputStream.write(']')
-            outputStream.end()
-          }
+          outputStream.write(']')
+          outputStream.end()
         },
       })
     },
@@ -323,7 +323,7 @@ export function getInstance<PipelineOutput>({
           return csvTarget
         }
 
-        return createWriteStream(csvTarget, {encoding: 'utf-8'})
+        return createWriteStream(csvTarget, { encoding: 'utf-8' })
       })()
 
       let stringifier: CSVStringifier
@@ -353,7 +353,7 @@ export function getInstance<PipelineOutput>({
       return traversor({
         callback: toCSV_,
         defaultReturn: () => {
-          if (!!stringifier) {
+          if (stringifier) {
             stringifier.end()
           }
         },

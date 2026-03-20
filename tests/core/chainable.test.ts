@@ -1,6 +1,7 @@
 import expect from 'expect'
-import {execute, inMemoryCSV, it} from '..'
-import {withCSV} from '../../src'
+import { execute, it } from '..'
+import { withCSV } from '../../src'
+import { inMemoryCSV } from '../../src/utils/in-memory-csv'
 
 const csv = inMemoryCSV(
   ['id', 'name', 'age'],
@@ -25,7 +26,7 @@ execute('Chainable methods', [
   it('pick', async () => {
     const result = await withCSV(csv).columns(['id', 'name']).pick('id').rows()
 
-    expect(result).toEqual([{id: '1'}, {id: '2'}, {id: '3'}, {id: '4'}])
+    expect(result).toEqual([{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }])
   }),
 
   it('filter', async () => {
@@ -35,8 +36,8 @@ execute('Chainable methods', [
       .rows()
 
     expect(result).toEqual([
-      {id: '2', name: 'Mike', age: '25'},
-      {id: '4', name: 'Marcel', age: '8'},
+      { id: '2', name: 'Mike', age: '25' },
+      { id: '4', name: 'Marcel', age: '8' },
     ])
   }),
 
@@ -51,7 +52,7 @@ execute('Chainable methods', [
       .rows()
 
     expect(count).toBe(4)
-    expect(result).toEqual([{id: '1'}, {id: '2'}, {id: '3'}, {id: '4'}])
+    expect(result).toEqual([{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }])
   }),
 
   it('uniq on 1 column name', async () => {
@@ -70,7 +71,7 @@ execute('Chainable methods', [
     const deduplicated = result.filter(row => row.id === '1')
 
     expect(deduplicated.length).toBe(1)
-    expect(deduplicated[0]).toEqual({id: '1', name: 'Joe'})
+    expect(deduplicated[0]).toEqual({ id: '1', name: 'Joe' })
   }),
 
   it('uniq on n column names', async () => {
@@ -89,7 +90,7 @@ execute('Chainable methods', [
     const deduplicated = result.filter(row => row.age === '35' && row.name === 'Joe')
 
     expect(deduplicated.length).toBe(1)
-    expect(deduplicated[0]).toEqual({id: '1', name: 'Joe', age: '35'})
+    expect(deduplicated[0]).toEqual({ id: '1', name: 'Joe', age: '35' })
   }),
 
   it('uniq with callback', async () => {
@@ -110,7 +111,7 @@ execute('Chainable methods', [
       .rows()
 
     expect(result.length).toBe(2)
-    expect(result[0]).toEqual({quantity1: '10', quantity2: '10'})
-    expect(result[1]).toEqual({quantity1: '2', quantity2: '5'})
+    expect(result[0]).toEqual({ quantity1: '10', quantity2: '10' })
+    expect(result[1]).toEqual({ quantity1: '2', quantity2: '5' })
   }),
 ])

@@ -1,25 +1,27 @@
-import isFunction from 'lodash.isfunction'
-import {ErrorPolicy} from '..'
-import {CSVError, RowError} from '../utils/errors'
-import {getInterface} from '../utils/get-interface'
-import {applyPipeline} from './apply-pipeline'
-import {PipelineMethod} from './get-instance'
+import { ErrorPolicy } from '..'
+import { CSVError, RowError } from '../utils/errors'
+import { getInterface } from '../utils/get-interface'
+import { applyPipeline } from './apply-pipeline'
+import { PipelineMethod } from './get-instance'
+
+type TraversorOptions<PipelineOutput, CallbackOutput, DefaultOutput> = {
+  callback: PipelineMethod<PipelineOutput, CallbackOutput>
+  defaultReturn: DefaultOutput | (() => DefaultOutput | Promise<DefaultOutput>)
+}
 
 export function getTraversor<PipelineOutput>(options: {
   getCSVInterface: () => ReturnType<typeof getInterface>
   errors: ErrorPolicy
   pipeline: [...Callbacks: PipelineMethod<unknown, unknown>[], LastCallback: PipelineMethod<unknown, PipelineOutput>]
 }) {
-  async function traversor<CallbackOutput, DefaultOutput>(traversorOptions: {
-    callback: PipelineMethod<PipelineOutput, CallbackOutput>
-    defaultReturn: DefaultOutput | (() => DefaultOutput | Promise<DefaultOutput>)
-  }): Promise<CallbackOutput | DefaultOutput>
-  async function traversor<CallbackOutput, DefaultOutput>(): Promise<undefined>
+  async function traversor(): Promise<void>
+  async function traversor<CallbackOutput, DefaultOutput>(
+    traversorOptions: TraversorOptions<PipelineOutput, CallbackOutput, DefaultOutput>,
+  ): Promise<CallbackOutput | DefaultOutput>
 
-  async function traversor<CallbackOutput, DefaultOutput>(traversorOptions?: {
-    callback: PipelineMethod<PipelineOutput, CallbackOutput>
-    defaultReturn: DefaultOutput | (() => DefaultOutput | Promise<DefaultOutput>)
-  }): Promise<CallbackOutput | DefaultOutput | undefined> {
+  async function traversor<CallbackOutput, DefaultOutput>(
+    traversorOptions?: TraversorOptions<PipelineOutput, CallbackOutput, DefaultOutput>,
+  ) {
     let idx = 0
     const csvErrors: RowError[] = []
 
@@ -27,21 +29,22 @@ export function getTraversor<PipelineOutput>(options: {
 
     for await (const row of readInterface) {
       try {
-        const value = await applyPipeline(options.pipeline, row, idx)
+        const value = (await applyPipeline(options.pipeline, row, idx)) as PipelineOutput
 
-        if (!!traversorOptions?.callback) {
+        if (traversorOptions?.callback) {
           const result = await traversorOptions.callback(value, idx)
           return result
         }
-      } catch (e) {
-        if (e instanceof Error) {
+      } catch (error) {
+        if (error instanceof Error) {
           if (options.errors === 'throw-early') {
-            throw e
+            throw new CSVError([{ idx: idx + 1, error, message: error.message }])
           }
           if (options.errors === 'throw-late') {
             csvErrors.push({
               idx: idx + 1,
-              error: (e as Error).message,
+              error,
+              message: error.message,
             })
           }
         }
@@ -49,17 +52,10 @@ export function getTraversor<PipelineOutput>(options: {
       idx++
     }
 
-    if (traversorOptions === undefined) {
-      return
-    }
-
-    let output: DefaultOutput
-
-    if (isFunction(traversorOptions.defaultReturn)) {
-      output = await traversorOptions.defaultReturn()
-    } else {
-      output = traversorOptions.defaultReturn
-    }
+    const output =
+      typeof traversorOptions?.defaultReturn === 'function'
+        ? await (traversorOptions.defaultReturn as () => DefaultOutput | Promise<DefaultOutput>)()
+        : traversorOptions?.defaultReturn
 
     if (options.errors === 'throw-late' && csvErrors.length > 0) {
       throw new CSVError(csvErrors, output)

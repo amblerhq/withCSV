@@ -12,15 +12,13 @@
 
 ```bash
 npm install with-csv
-# or
-yarn add with-csv
 ```
 
-## Usage examples
+## Examples
 
 📜 For detailed usage see the [Full API documentation](API.md)
 
-Given the following CSV file : 
+Given the following CSV file :
 
 ```csv
 id,name,phone,flag,category
@@ -45,6 +43,43 @@ console.log(result)
 //   "Joe: 0612345678",
 //   "Jack: 0698765421"
 // ]
+```
+
+### Working with Buffers and Streams
+
+`withCSV` also accepts Buffers and ReadStreams, making it easy to work with data from any source :
+
+```typescript
+import { createReadStream } from 'fs'
+
+// From a Buffer
+const buffer = Buffer.from('id,name\n1,Joe\n2,Jack')
+const rows = await withCSV(buffer).columns(['id', 'name']).rows()
+
+// From a ReadStream
+const stream = createReadStream('my.csv')
+const rows = await withCSV(stream).columns(['id', 'name']).rows()
+```
+
+### Data validation
+
+Use `validate` with your favorite validation library (yup, zod, joi...) or a simple hand-rolled validator. It transforms and validates each row, giving you typed output :
+
+```typescript
+import { object, string, number } from 'yup'
+
+const schema = object({
+  id: number().required(),
+  name: string().required(),
+  balance: number().positive().required(),
+})
+
+const result = await withCSV('accounts.csv')
+  .validate(row => schema.validateSync(row))
+  .filter(row => row.balance > 1000)
+  .rows()
+
+// result is typed as { id: number, name: string, balance: number }[]
 ```
 
 ### Database imports
@@ -98,27 +133,28 @@ id,value
 ```
 
 ```typescript
-// throw-early will stop reading the file and throw on the first time it encounters an error 
+import { CSVError } from 'with-csv/build/utils/errors'
+
+// throw-early will stop reading the file and throw on the first time it encounters an error
 try {
-  await withCSV('datapoints.csv', {errors: 'throw-early'})
+  await withCSV('datapoints.csv', { errors: 'throw-early' })
     .columns(['type', 'value'])
     .filter(row => row.type === 'input')
     .forEach(row => assert(row.value > 0))
     .toCSVFile('never.csv')
     // Note that the CSV file will never be written
 } catch (e) {
-  if (e instanceof Error) {
-    console.log("Can't process the input file : " + e.message)
+  if (e instanceof CSVError) {
+    console.log("Can't process the input file : " + e.rows[0].message)
   }
 }
-
 ```
 
 ```typescript
 // throw-late will continue reading rows from the CSV file, ignoring those that throw.
 // An error will be thrown at the end of the file, exposing all the accumulated errors
 try {
-  await withCSV('datapoints.csv', {errors: 'throw-late'})
+  await withCSV('datapoints.csv', { errors: 'throw-late' })
     .columns(['type', 'timestamp', 'value'])
     .forEach(row => assert(row.value > 0))
     .toCSVFile('valid_datapoints.csv')
@@ -127,9 +163,9 @@ try {
   if (e instanceof CSVError) {
     console.log("The following lines have issues :")
 
-    e.errors.forEach(line => {
-      // The CSVError instance exposes for each error the line index and the error message
-      console.log(line.idx + " : " + line.error)
+    e.rows.forEach(row => {
+      // The CSVError instance exposes for each error the row index, the Error object, and the message
+      console.log(row.idx + " : " + row.message)
     })
   }
 }
@@ -138,7 +174,7 @@ try {
 ```typescript
 // ignore will continue reading rows from the CSV file, ignoring those that throw.
 // After finishing the file it will not throw an error.
-await withCSV('datapoints.csv', {errors: 'ignore'})
+await withCSV('datapoints.csv', { errors: 'ignore' })
   .columns(['type', 'timestamp', 'value'])
   .forEach(row => assert(row.value > 0))
   .forEach(async (row) => {
@@ -151,7 +187,7 @@ await withCSV('datapoints.csv', {errors: 'ignore'})
 
 Feel free to write us about any [bug you may find](https://github.com/amblerhq/withCSV/issues), or [submit a PR](https://github.com/amblerhq/withCSV/pulls) if you have fresh ideas for the library !
 
-You can run the tests with `yarn test` and the benchmarks with `yarn benchmark` (this will generate ~250MB of fixtures).
+You can run the tests with `npm test` and the benchmarks with `npm run benchmark` (this will generate ~250MB of fixtures).
 
 You can check the benchmark results [here](BENCHMARKS.md)
 

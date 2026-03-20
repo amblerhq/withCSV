@@ -1,7 +1,8 @@
 import expect from 'expect'
-import {execute, inMemoryCSV, it} from '..'
-import {withCSV} from '../../src'
-import {CSVError} from '../../src/utils/errors'
+import { execute, it } from '..'
+import { withCSV } from '../../src'
+import { CSVError } from '../../src/utils/errors'
+import { inMemoryCSV } from '../../src/utils/in-memory-csv'
 
 const csv = inMemoryCSV(
   ['id', 'name', 'age'],
@@ -18,7 +19,7 @@ execute('Error management', [
     const maxLoops = 3
     let loopCount = 0
 
-    await withCSV(csv, {errors: 'throw-early'})
+    await withCSV(csv, { errors: 'throw-early' })
       .columns(['name'])
       .map((row, idx) => {
         if (idx >= maxLoops) {
@@ -33,7 +34,13 @@ execute('Error management', [
       })
       .catch(e => {
         expect(loopCount).toEqual(3)
-        expect(e.message).toBe('Sike !')
+        expect(e instanceof CSVError).toBe(true)
+
+        if (e instanceof CSVError) {
+          expect(e.rows.length).toEqual(1)
+          expect(e.rows[0].idx).toBe(4)
+          expect(e.rows[0].message).toBe('Sike !')
+        }
       })
   }),
 
@@ -41,7 +48,7 @@ execute('Error management', [
     const maxLoops = 2
     let loopCount = 0
 
-    await withCSV(csv, {errors: 'throw-late'})
+    await withCSV(csv, { errors: 'throw-late' })
       .columns(['name'])
       .map((row, idx) => {
         if (idx >= maxLoops) {
@@ -58,14 +65,14 @@ execute('Error management', [
         expect(e instanceof CSVError).toBe(true)
 
         if (e instanceof CSVError) {
-          expect(e.errors.length).toEqual(2)
-          expect(e.errors[0].idx).toBe(3)
-          expect(e.errors[1].idx).toBe(4)
+          expect(e.rows.length).toEqual(2)
+          expect(e.rows[0].idx).toBe(3)
+          expect(e.rows[1].idx).toBe(4)
 
           const results = e.results as unknown[]
           expect(results.length).toEqual(2)
-          expect(results[0]).toEqual({name: 'Joe'})
-          expect(results[1]).toEqual({name: 'Mike'})
+          expect(results[0]).toEqual({ name: 'Joe' })
+          expect(results[1]).toEqual({ name: 'Mike' })
         }
       })
   }),
@@ -74,7 +81,7 @@ execute('Error management', [
     const maxLoops = 2
     let loopCount = 0
 
-    const results = await withCSV(csv, {errors: 'ignore'})
+    const results = await withCSV(csv, { errors: 'ignore' })
       .columns(['name'])
       .map((row, idx) => {
         if (idx >= maxLoops) {
@@ -86,7 +93,7 @@ execute('Error management', [
       .rows()
 
     expect(results.length).toEqual(2)
-    expect(results[0]).toEqual({name: 'Joe'})
-    expect(results[1]).toEqual({name: 'Mike'})
+    expect(results[0]).toEqual({ name: 'Joe' })
+    expect(results[1]).toEqual({ name: 'Mike' })
   }),
 ])

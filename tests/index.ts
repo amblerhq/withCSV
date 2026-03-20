@@ -1,9 +1,9 @@
 import chalk from 'chalk'
-import {MultiBar, Presets} from 'cli-progress'
-import {JestAssertionError} from 'expect'
-import ora, {Ora} from 'ora'
-import {withCSV} from '../src'
-import {WithCSVInstance} from '../src/utils/types'
+import { MultiBar, Presets } from 'cli-progress'
+import { JestAssertionError } from 'expect'
+import ora, { Ora } from 'ora'
+import { withCSV } from '../src'
+import { WithCSVInstance } from '../src/utils/types'
 
 export const it = (message: string, callback: () => Promise<void>) => {
   return {
@@ -44,7 +44,7 @@ export const benchmark = (
       await Promise.all(
         benchmarks.map(async benchmark => {
           const filePath = `tests/fixtures/${benchmark}.csv`
-          const progress = multibar.create(size[benchmark], 0, {benchmark: benchmark.padEnd(6)})
+          const progress = multibar.create(size[benchmark], 0, { benchmark: benchmark.padEnd(6) })
 
           const withCSVInstance = await withCSV(filePath)
             .columns(columns)
@@ -76,14 +76,14 @@ export async function execute(suiteMessage: string, testSuite: ReturnType<typeof
 
   for (let test of testSuite) {
     i++
-    const {message, callback, isBenchmark} = test
+    const { message, callback, isBenchmark } = test
 
     let testSpinner: Ora | null = null
 
     if (isBenchmark) {
       console.log(chalk.blue(message))
     } else {
-      testSpinner = ora({indent: 2}).start(message)
+      testSpinner = ora({ indent: 2 }).start(message)
     }
 
     try {
@@ -107,10 +107,4 @@ export async function execute(suiteMessage: string, testSuite: ReturnType<typeof
     console.log(`🧐 ${chalk.red(`${failure} KO`)}`)
   }
   console.log()
-}
-
-export const inMemoryCSV = (headers: string[], rows: string[][]) => {
-  const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
-
-  return Buffer.from(csv)
 }

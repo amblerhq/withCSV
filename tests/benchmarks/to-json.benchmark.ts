@@ -1,4 +1,4 @@
-import {benchmark, execute} from '..'
+import { benchmark, execute } from '..'
 
 execute('JSON stream stringifier', [
   benchmark('Default (prettified) stringifier', async (withCSVInstance, filePath) => {

@@ -1,4 +1,4 @@
-import {benchmark, execute} from '..'
+import { benchmark, execute } from '..'
 
 execute('Basic functions', [
   benchmark('1 map', async withCSVInstance => {
