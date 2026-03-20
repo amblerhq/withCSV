@@ -1,7 +1,7 @@
 import chalk from 'chalk'
-import { MultiBar, Presets } from 'cli-progress'
 import { JestAssertionError } from 'expect'
 import ora, { Ora } from 'ora'
+import { performance } from 'perf_hooks'
 import { withCSV } from '../src'
 import { WithCSVInstance } from '../src/utils/types'
 
@@ -13,13 +13,13 @@ export const it = (message: string, callback: () => Promise<void>) => {
   }
 }
 
-const benchmarks = ['small', 'medium', 'large'] as const
-const size: Record<(typeof benchmarks)[number], number> = {
-  small: 100,
-  medium: 100_000,
-  large: 2_000_000,
-}
+const sizes = ['small', 'medium', 'large'] as const
 const columns = ['First Name', 'Last Name', 'Phone', 'City', 'Description'] as const
+
+function formatDuration(ms: number) {
+  if (ms < 1000) return `${Math.round(ms)}ms`
+  return `${(ms / 1000).toFixed(2)}s`
+}
 
 export const benchmark = (
   message: string,
@@ -31,41 +31,29 @@ export const benchmark = (
   return {
     message,
     callback: async () => {
-      const multibar = new MultiBar(
-        {
-          clearOnComplete: false,
-          autopadding: true,
-          fps: 5,
-          format: '{benchmark} | {duration_formatted} | {bar} | {value}/{total}',
-        },
-        Presets.rect,
-      )
+      const spinner = ora({ indent: 2 }).start(message)
 
-      await Promise.all(
-        benchmarks.map(async benchmark => {
-          const filePath = `tests/fixtures/${benchmark}.csv`
-          const progress = multibar.create(size[benchmark], 0, { benchmark: benchmark.padEnd(6) })
+      const results = await Promise.all(
+        sizes.map(async (size) => {
+          const filePath = `tests/fixtures/${size}.csv`
+          const instance = withCSV(filePath).columns(columns)
 
-          const withCSVInstance = await withCSV(filePath)
-            .columns(columns)
-            .forEach(() => {
-              progress.increment(1)
-            })
+          const start = performance.now()
+          await callback(instance, filePath)
+          const elapsed = performance.now() - start
 
-          await callback(withCSVInstance, filePath)
-
-          progress.stop()
+          return { size, elapsed }
         }),
       )
 
-      multibar.stop()
+      const summary = results.map((r) => `${r.size} ${chalk.yellow(formatDuration(r.elapsed))}`).join('  ')
+      spinner.succeed(`${message}  ${summary}`)
     },
     isBenchmark: true,
   }
 }
 
 export async function execute(suiteMessage: string, testSuite: ReturnType<typeof it>[]) {
-  let i = 0
   let success = 0
   let failure = 0
 
@@ -75,14 +63,11 @@ export async function execute(suiteMessage: string, testSuite: ReturnType<typeof
   console.log()
 
   for (let test of testSuite) {
-    i++
     const { message, callback, isBenchmark } = test
 
     let testSpinner: Ora | null = null
 
-    if (isBenchmark) {
-      console.log(chalk.blue(message))
-    } else {
+    if (!isBenchmark) {
       testSpinner = ora({ indent: 2 }).start(message)
     }
 

@@ -15,7 +15,10 @@ export async function* traverseRows<PipelineOutput>(options: {
 
   for await (const row of readInterface) {
     try {
-      const result = await applyPipeline(options.pipeline, row, idx)
+      const rawResult = applyPipeline(options.pipeline, row, idx)
+      const result = rawResult !== null && typeof rawResult === 'object' && typeof (rawResult as any).then === 'function'
+        ? await rawResult
+        : rawResult
 
       if (result !== SKIP) {
         yield { value: result as PipelineOutput, idx }

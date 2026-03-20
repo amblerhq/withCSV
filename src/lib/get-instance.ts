@@ -40,13 +40,11 @@ export function getInstance<PipelineOutput>({
 
   return {
     map<CallbackOutput>(callback: PipelineMethod<PipelineOutput, CallbackOutput>) {
-      return stack(async function map_(value, index) {
-        return await callback(value, index)
-      })
+      return stack(callback)
     },
 
     pick<Column extends keyof PipelineOutput>(keys: Column | Column[]) {
-      return stack(async function pick_(value) {
+      return stack(function pick_(value) {
         return pick(value as Record<string, unknown>, keys as string | string[]) as Record<
           Column,
           PipelineOutput[Column]
@@ -55,14 +53,25 @@ export function getInstance<PipelineOutput>({
     },
 
     filter(callback: PipelineMethod<PipelineOutput, boolean>) {
-      return stack(async function filter_(value, index) {
-        return (await callback(value, index)) ? value : (SKIP as any)
+      return stack(function filter_(value, index) {
+        const result = callback(value, index)
+
+        if (typeof result === 'object' && result !== null && typeof (result as any).then === 'function') {
+          return (result as Promise<boolean>).then((v) => (v ? value : (SKIP as any)))
+        }
+
+        return result ? value : (SKIP as any)
       })
     },
 
     forEach(callback: PipelineMethod<PipelineOutput, void>) {
-      return stack(async function forEach_(value, index) {
-        await callback(value, index)
+      return stack(function forEach_(value, index) {
+        const result = callback(value, index)
+
+        if (typeof result === 'object' && result !== null && typeof (result as any).then === 'function') {
+          return (result as Promise<void>).then(() => value)
+        }
+
         return value
       })
     },
@@ -85,21 +94,26 @@ export function getInstance<PipelineOutput>({
       let seen = new Set<string>()
       let initialized = false
 
-      return stack(async function uniq_(value, index) {
+      return stack(function uniq_(value, index) {
         if (!initialized) {
           seen = new Set<string>()
           initialized = true
         }
 
-        const rowToHash = callback ? await callback(value, index) : value
-        const hashedRow = simpleHash(rowToHash)
+        const rowToHash = callback ? callback(value, index) : value
 
-        if (seen.has(hashedRow)) {
-          return SKIP as any
+        if (typeof rowToHash === 'object' && rowToHash !== null && typeof (rowToHash as any).then === 'function') {
+          return (rowToHash as Promise<unknown>).then((resolved) => {
+            const hashedRow = simpleHash(resolved)
+            if (seen.has(hashedRow)) return SKIP as any
+            seen.add(hashedRow)
+            return value
+          })
         }
 
+        const hashedRow = simpleHash(rowToHash)
+        if (seen.has(hashedRow)) return SKIP as any
         seen.add(hashedRow)
-
         return value
       })
     },
