@@ -33,18 +33,17 @@ export const benchmark = (
     callback: async () => {
       const spinner = ora({ indent: 2 }).start(message)
 
-      const results = await Promise.all(
-        sizes.map(async (size) => {
-          const filePath = `tests/fixtures/${size}.csv`
-          const instance = withCSV(filePath).columns(columns)
+      const results: { size: string; elapsed: number }[] = []
+      for (const size of sizes) {
+        const filePath = `tests/fixtures/${size}.csv`
+        const instance = withCSV(filePath).columns(columns)
 
-          const start = performance.now()
-          await callback(instance, filePath)
-          const elapsed = performance.now() - start
+        const start = performance.now()
+        await callback(instance, filePath)
+        const elapsed = performance.now() - start
 
-          return { size, elapsed }
-        }),
-      )
+        results.push({ size, elapsed })
+      }
 
       const summary = results.map((r) => `${r.size} ${chalk.yellow(formatDuration(r.elapsed))}`).join('  ')
       spinner.succeed(`${message}  ${summary}`)

@@ -67,6 +67,8 @@ The only major differences are :
 - All methods in the querying API accept **asynchronous callbacks**
 - Array methods such as `filter`, `map` etc... will not receive the whole array as their last argument. This is by design as the CSV file is never held fully in memory.
 
+> **Index convention**: Callbacks receive a **0-based** index representing the row's position in the pipeline output (starting from 0 for the first row reaching that callback). In contrast, `CSVError.rows[].idx` uses **1-based** indexing representing the original row number in the CSV file (row 1 is the first data row after the header). This distinction matters when using error policies alongside `findIndex` or other index-aware methods.
+
 ### ⛓️ Chainable methods
 
 **map(callback)**: maps each record to a new shape. The output will be typed accordingly.

@@ -12,18 +12,11 @@ export function simpleHash(source: any): string {
       return `s:${source}`
     default: {
       if (Array.isArray(source)) {
-        return `a:${JSON.stringify(source)}`
+        return `a:${source.map(simpleHash).join('\x00')}`
       }
 
       const keys = Object.keys(source).sort()
-      let hash = 'o:'
-
-      for (let i = 0; i < keys.length; i++) {
-        if (i > 0) hash += '\x00'
-        hash += keys[i] + '\x00' + simpleHash(source[keys[i]])
-      }
-
-      return hash
+      return `o:${keys.map(k => k + '\x00' + simpleHash(source[k])).join('\x00')}`
     }
   }
 }

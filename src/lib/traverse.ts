@@ -1,7 +1,7 @@
 import { ErrorPolicy } from '../utils/types'
 import { CSVError, RowError } from '../utils/errors'
 import { getInterface } from '../utils/get-interface'
-import { applyPipeline, SKIP } from './apply-pipeline'
+import { applyPipeline, isPromise, SKIP } from './apply-pipeline'
 
 export async function* traverseRows<PipelineOutput>(options: {
   getCSVInterface: () => ReturnType<typeof getInterface>
@@ -17,9 +17,7 @@ export async function* traverseRows<PipelineOutput>(options: {
     for await (const row of readInterface) {
       try {
         const rawResult = applyPipeline(options.pipeline, row, idx)
-        const result = rawResult !== null && typeof rawResult === 'object' && typeof (rawResult as any).then === 'function'
-          ? await rawResult
-          : rawResult
+        const result = isPromise(rawResult) ? await rawResult : rawResult
 
         if (result !== SKIP) {
           yield { value: result as PipelineOutput, idx }

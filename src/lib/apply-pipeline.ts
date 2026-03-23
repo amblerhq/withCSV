@@ -1,6 +1,6 @@
 export const SKIP: unique symbol = Symbol('skip')
 
-function isPromise(value: unknown): value is Promise<unknown> {
+export function isPromise(value: unknown): value is Promise<unknown> {
   return value !== null && typeof value === 'object' && typeof (value as any).then === 'function'
 }
 

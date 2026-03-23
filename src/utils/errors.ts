@@ -4,17 +4,17 @@ export type RowError = {
   message?: string
 }
 
-export class CSVError extends Error {
+export class CSVError<TResults = unknown> extends Error {
   rows: RowError[]
-  results: unknown
+  results: TResults
 
-  constructor(rows: RowError[], results?: unknown) {
+  constructor(rows: RowError[], results?: TResults) {
     super(`CSV processing failed with ${rows.length} error(s)`, {
       cause: rows.length === 1 ? rows[0].error : rows.map((r) => r.error),
     })
     Object.setPrototypeOf(this, CSVError.prototype)
 
     this.rows = rows
-    this.results = results
+    this.results = results as TResults
   }
 }

@@ -2,7 +2,7 @@ import expect from 'expect'
 import { execute, it } from '..'
 import { withCSV } from '../../src'
 import { CSVError } from '../../src/utils/errors'
-import { inMemoryCSV } from '../../src/utils/in-memory-csv'
+import { inMemoryCSV } from '../in-memory-csv'
 
 const csv = inMemoryCSV(
   ['id', 'name', 'age'],

@@ -106,7 +106,7 @@ execute('Terminator methods', [
     expect(result).toBe(false)
   }),
 
-  it('includes returns false', async () => {
+  it('includes returns true', async () => {
     const buffer = Buffer.from(data)
 
     const result = await withCSV(buffer).columns(['id', 'name', 'age']).includes({ id: '3', name: 'Alfred', age: '67' })

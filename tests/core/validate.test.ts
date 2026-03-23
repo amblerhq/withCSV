@@ -2,7 +2,7 @@ import expect from 'expect'
 import { execute, it } from '..'
 import { withCSV } from '../../src'
 import { CSVError } from '../../src/utils/errors'
-import { inMemoryCSV } from '../../src/utils/in-memory-csv'
+import { inMemoryCSV } from '../in-memory-csv'
 
 // Minimal mock validator: parses id as number, keeps name as string, parses balance as number.
 // Throws on NaN values.

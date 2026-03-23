@@ -37,8 +37,11 @@ export function withCSV(
   return {
     columns<Column extends string>(columns: Column[] | readonly Column[]) {
       type BaseType = Record<string, string>
-      const pickColumns = ((value: BaseType) =>
-        Object.fromEntries(columns.map(c => [c, value[c]])) as Record<Column, string | undefined>) as unknown as PipelineMethod<
+      const pickColumns = ((value: BaseType) => {
+        const result = {} as Record<Column, string | undefined>
+        for (let i = 0; i < columns.length; i++) result[columns[i]] = value[columns[i]]
+        return result
+      }) as unknown as PipelineMethod<
         unknown,
         Record<Column, string | undefined>
       >

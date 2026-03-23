@@ -10,10 +10,10 @@ export function generateCSV(name: string, length: number) {
 
   for (let i = 0; i < length; i++) {
     stringifier.write([
-      faker.name.firstName(),
-      faker.name.lastName(),
+      faker.person.firstName(),
+      faker.person.lastName(),
       faker.phone.number(),
-      faker.address.city(),
+      faker.location.city(),
       faker.company.catchPhrase(),
     ])
   }
