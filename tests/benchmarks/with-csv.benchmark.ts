@@ -1,15 +1,8 @@
-import {benchmark, execute} from '..'
-import {withCSV} from '../../src'
+import { benchmark, execute } from '..'
 
-const columns = ['First Name', 'Last Name', 'Phone', 'City', 'Description'] as const
-
-execute('Basic operation', [
-  benchmark('Import and export', async path => {
-    await withCSV(path).columns(columns).toCSV(`${path}.result.csv`)
-  }),
-  benchmark('1 map', async path => {
-    await withCSV(path)
-      .columns(columns)
+execute('Basic functions', [
+  benchmark('1 map', async withCSVInstance => {
+    await withCSVInstance
       .map(row => ({
         firstName: row['First Name'],
         lastName: row['Last Name'],
@@ -19,9 +12,8 @@ execute('Basic operation', [
       }))
       .rows()
   }),
-  benchmark('4 chained map', async path => {
-    await withCSV(path)
-      .columns(columns)
+  benchmark('4 chained map', async withCSVInstance => {
+    await withCSVInstance
       .map(row => ({
         firstName: row['First Name'],
         lastName: row['Last Name'],
@@ -37,7 +29,7 @@ execute('Basic operation', [
       .map(row => `${row.name}, ${row.coords.join(' - ')}`)
       .rows()
   }),
-  benchmark('uniq', async path => {
-    await withCSV(path).columns(columns).uniq('Description').rows()
+  benchmark('uniq', async withCSVInstance => {
+    await withCSVInstance.uniq('Description').run()
   }),
 ])

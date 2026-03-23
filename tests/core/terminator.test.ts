@@ -1,6 +1,6 @@
 import expect from 'expect'
-import {execute, it} from '..'
-import {withCSV} from '../../src'
+import { execute, it } from '..'
+import { withCSV } from '../../src'
 
 const data = `id,name,age
 1,Joe,23
@@ -19,7 +19,7 @@ execute('Terminator methods', [
       .forEach(() => {
         count++
       })
-      .process()
+      .run()
 
     expect(count).toBe(4)
   }),
@@ -29,9 +29,11 @@ execute('Terminator methods', [
 
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
-      .find(row => row.name === 'Mike')
+      .find(row => {
+        return row.name === 'Mike'
+      })
 
-    expect(result).toEqual({id: '2', name: 'Mike', age: '25'})
+    expect(result).toEqual({ id: '2', name: 'Mike', age: '25' })
   }),
 
   it('find returns null', async () => {
@@ -69,7 +71,7 @@ execute('Terminator methods', [
 
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
-      .every(row => parseInt(row.age) < 150)
+      .every(row => parseInt(row.age!) < 150)
 
     expect(result).toBe(true)
   }),
@@ -79,7 +81,7 @@ execute('Terminator methods', [
 
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
-      .every(row => parseInt(row.age) < 50)
+      .every(row => parseInt(row.age!) < 50)
 
     expect(result).toBe(false)
   }),
@@ -89,7 +91,7 @@ execute('Terminator methods', [
 
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
-      .some(row => parseInt(row.age) > 50)
+      .some(row => parseInt(row.age!) > 50)
 
     expect(result).toBe(true)
   }),
@@ -99,15 +101,15 @@ execute('Terminator methods', [
 
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
-      .some(row => parseInt(row.age) > 150)
+      .some(row => parseInt(row.age!) > 150)
 
     expect(result).toBe(false)
   }),
 
-  it('includes returns false', async () => {
+  it('includes returns true', async () => {
     const buffer = Buffer.from(data)
 
-    const result = await withCSV(buffer).columns(['id', 'name', 'age']).includes({id: '3', name: 'Alfred', age: '67'})
+    const result = await withCSV(buffer).columns(['id', 'name', 'age']).includes({ id: '3', name: 'Alfred', age: '67' })
 
     expect(result).toBe(true)
   }),
@@ -117,7 +119,7 @@ execute('Terminator methods', [
 
     const result = await withCSV(buffer)
       .columns(['id', 'name', 'age'])
-      .includes({id: '666', name: 'Petyr', age: '3500'})
+      .includes({ id: '666', name: 'Petyr', age: '3500' })
 
     expect(result).toBe(false)
   }),
@@ -128,7 +130,7 @@ execute('Terminator methods', [
     const result = await withCSV(buffer).columns(['id']).first(2)
 
     expect(result.length).toBe(2)
-    expect(result).toEqual([{id: '1'}, {id: '2'}])
+    expect(result).toEqual([{ id: '1' }, { id: '2' }])
   }),
 
   it('last', async () => {
@@ -137,7 +139,7 @@ execute('Terminator methods', [
     const result = await withCSV(buffer).columns(['id']).last(2)
 
     expect(result.length).toBe(2)
-    expect(result).toEqual([{id: '3'}, {id: '4'}])
+    expect(result).toEqual([{ id: '3' }, { id: '4' }])
   }),
 
   it('skip', async () => {
@@ -146,7 +148,7 @@ execute('Terminator methods', [
     const result = await withCSV(buffer).columns(['id']).skip(3)
 
     expect(result.length).toBe(1)
-    expect(result).toEqual([{id: '4'}])
+    expect(result).toEqual([{ id: '4' }])
   }),
 
   it('count returns n items', async () => {
@@ -165,19 +167,11 @@ execute('Terminator methods', [
     expect(result).toBe(0)
   }),
 
-  it('key', async () => {
+  it('pluck', async () => {
     const buffer = Buffer.from(data)
 
-    const result = await withCSV(buffer).columns(['id', 'name']).key('id')
+    const result = await withCSV(buffer).columns(['id', 'name']).pluck('id')
 
     expect(result).toEqual(['1', '2', '3', '4'])
-  }),
-
-  it('toJSON', async () => {
-    const buffer = Buffer.from(data)
-
-    const result = await withCSV(buffer).columns(['id']).toJSON()
-
-    expect(result).toBe(`[{"id":"1"},{"id":"2"},{"id":"3"},{"id":"4"}]`)
   }),
 ])

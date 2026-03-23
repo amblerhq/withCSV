@@ -1,6 +1,6 @@
 {
   "name": "with-csv",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "license": "MIT",
   "description": "A CSV file manipulation library with a fluent API à la Lodash",
   "main": "build/index.js",
@@ -8,6 +8,9 @@
   "files": [
     "build"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "keywords": [
     "csv",
     "stream",
@@ -26,32 +29,30 @@
   },
   "scripts": {
     "build": "tsc",
+    "fixtures:clean": "for i in tests/fixtures/*.*; do rm -f $i; done",
     "fixtures:generate": "echo 'Generating Fixtures'; ts-node tests/generate.ts; echo 'Compressing Fixtures'; for i in small medium large; do tar -czvf tests/fixtures/$i.tar.gz tests/fixtures/$i.csv; done",
-    "prefixtures:unpack": "[ -f tests/fixtures/small.tar.gz ] || yarn fixtures:generate",
+    "prefixtures:unpack": "[ -f tests/fixtures/small.tar.gz ] || npm run fixtures:generate",
     "fixtures:unpack": "echo 'Unpacking Fixtures'; for i in small medium large; do tar -xzvf tests/fixtures/$i.tar.gz; done",
-    "pretest": "[ -f tests/fixtures/small.csv ] || yarn fixtures:unpack;",
-    "posttest": "for i in tests/fixtures/*.result.csv; do rm -f $i; done",
-    "test": "echo 'Test suite'; for i in tests/**/*.test.ts; do ts-node $i; done; echo 'Benchmark suite'; for i in tests/**/*.benchmark.ts; do ts-node $i;done",
-    "prepare": "yarn build"
+    "pretest": "[ -f tests/fixtures/small.csv ] || npm run fixtures:unpack",
+    "test": "find tests -name '*.test.ts' -exec ts-node {} \\;",
+    "prebenchmark": "[ -f tests/fixtures/small.csv ] || npm run fixtures:unpack",
+    "benchmark": "find tests -name '*.benchmark.ts' -exec ts-node {} \\;",
+    "postbenchmark": "for i in tests/fixtures/*.result.*; do rm -f $i; done",
+    "prepare": "npm run build"
   },
   "dependencies": {
-    "csv-parser": "^3.0.0",
-    "csv-stringify": "^6.2.1",
-    "lodash.isarray": "^4.0.0",
-    "lodash.isequal": "^4.5.0",
-    "lodash.isstring": "^4.0.1",
-    "lodash.pick": "^4.4.0"
+    "csv-parser": "^3.2.0",
+    "csv-stringify": "^6.7.0"
   },
   "devDependencies": {
     "@faker-js/faker": "^7.6.0",
-    "@types/lodash.isarray": "^4.0.7",
-    "@types/lodash.isequal": "^4.5.6",
-    "@types/lodash.isstring": "^4.0.7",
-    "@types/lodash.pick": "^4.4.7",
-    "@types/node": "^18.11.9",
+    "@types/cli-progress": "^3.11.6",
+    "@types/node": "^22.15.0",
     "chalk": "^4.1.2",
+    "cli-progress": "^3.12.0",
     "expect": "^29.3.1",
-    "ts-node": "^10.9.1",
-    "typescript": "^4.8.4"
+    "ora": "^5.4.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   }
 }
