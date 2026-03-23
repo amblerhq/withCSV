@@ -33,6 +33,7 @@ import { withCSV } from 'with-csv'
 
 const result = await withCSV('my.csv')
   .columns(['name', 'phone', 'flag'])
+  // columns() returns string | undefined — use ! when you know the column exists
   .filter(row => row.flag === 'true')
   .map(row => `${row.name}: ${row.phone}`)
   .filter(value => value.startsWith('J'))
@@ -133,7 +134,7 @@ id,value
 ```
 
 ```typescript
-import { CSVError } from 'with-csv/build/utils/errors'
+import { CSVError } from 'with-csv'
 
 // throw-early will stop reading the file and throw on the first time it encounters an error
 try {
@@ -180,7 +181,7 @@ await withCSV('datapoints.csv', { errors: 'ignore' })
   .forEach(async (row) => {
     await saveInDatabase(row)
   })
-  .process()
+  .run()
 ```
 
 ## Contributing & Testing
@@ -188,7 +189,5 @@ await withCSV('datapoints.csv', { errors: 'ignore' })
 Feel free to write us about any [bug you may find](https://github.com/amblerhq/withCSV/issues), or [submit a PR](https://github.com/amblerhq/withCSV/pulls) if you have fresh ideas for the library !
 
 You can run the tests with `npm test` and the benchmarks with `npm run benchmark` (this will generate ~250MB of fixtures).
-
-You can check the benchmark results [here](BENCHMARKS.md)
 
 Made with 💖 @ [Ambler HQ](https://github.com/amblerhq)

@@ -27,12 +27,12 @@ Valid values for **options.errors** are :
 
 ## Entry points
 
-**columns(columnNames)**: Takes an array of column names to select from the CSV. This tells TypeScript how to type your rows. The output rows will only contain the specified columns.
+**columns(columnNames)**: Takes an array of column names to select from the CSV. This tells TypeScript how to type your rows. The output rows will only contain the specified columns. Values are typed as `string | undefined` — a column may be missing from a row.
 
 ```typescript
 await withCSV('data.csv')
   .columns(['id', 'name', 'age'])
-  // row is typed as { id: string, name: string, age: string }
+  // row is typed as { id: string | undefined, name: string | undefined, age: string | undefined }
 ```
 
 **validate(validator)**: Takes a function that receives each raw row and returns a transformed, validated version. Use this with any validation library (yup, zod, joi) or a hand-rolled validator. The callback's return type determines the pipeline's type going forward.
@@ -87,7 +87,7 @@ The only major differences are :
 
 _The following methods only ever consume one row at a time so they are safe to use on very large files_
 
-**process()**: Executes the pipeline on all the rows, but without outputting any data. This is useful for example when your pipeline is based on `forEach` and you want to discard the final output data.
+**run()**: Executes the pipeline on all the rows, but without outputting any data. This is useful for example when your pipeline is based on `forEach` and you want to discard the final output data.
 
 **find(callback)**: returns the first matching record, or `null` if none match. Stops reading as soon as a match is found.
 
@@ -121,14 +121,14 @@ _The following methods will store their result in memory. Very large files shoul
 
 **skip(offset)**: returns the whole result but omits the `offset` first items.
 
-**key(property, filterUndefined)**: returns an array of the values of that `property` for each row. If `filterUndefined` is true, then only defined values will be returned.
+**pluck(property, filterUndefined)**: returns an array of the values of that `property` for each row. If `filterUndefined` is true, then only defined values will be returned.
 
 ## Error Management
 
 When `options.errors` is set to `throw-early` or `throw-late`, a `CSVError` is thrown.
 
 ```typescript
-import { CSVError } from 'with-csv/build/utils/errors'
+import { CSVError } from 'with-csv'
 ```
 
 The `CSVError` instance exposes :

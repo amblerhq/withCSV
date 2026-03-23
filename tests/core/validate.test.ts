@@ -131,7 +131,7 @@ execute('Validate method', [
       .forEach(() => {
         count++
       })
-      .process()
+      .run()
 
     expect(count).toBe(2)
   }),

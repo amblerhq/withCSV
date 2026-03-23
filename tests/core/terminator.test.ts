@@ -19,7 +19,7 @@ execute('Terminator methods', [
       .forEach(() => {
         count++
       })
-      .process()
+      .run()
 
     expect(count).toBe(4)
   }),
@@ -167,10 +167,10 @@ execute('Terminator methods', [
     expect(result).toBe(0)
   }),
 
-  it('key', async () => {
+  it('pluck', async () => {
     const buffer = Buffer.from(data)
 
-    const result = await withCSV(buffer).columns(['id', 'name']).key('id')
+    const result = await withCSV(buffer).columns(['id', 'name']).pluck('id')
 
     expect(result).toEqual(['1', '2', '3', '4'])
   }),

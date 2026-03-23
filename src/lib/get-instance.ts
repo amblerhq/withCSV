@@ -1,6 +1,6 @@
 import { Stringifier as CSVStringifier, stringify as csvStringify, Options as CSVStringifyOptions } from 'csv-stringify'
 import { createWriteStream, WriteStream } from 'fs'
-import { ErrorPolicy } from '..'
+import { ErrorPolicy } from '../utils/types'
 import { isDeepStrictEqual } from 'node:util'
 import { CSVError } from '../utils/errors'
 import { getInterface } from '../utils/get-interface'
@@ -92,12 +92,10 @@ export function getInstance<PipelineOutput>({
       })()
 
       let seen = new Set<string>()
-      let initialized = false
 
       return stack(function uniq_(value, index) {
-        if (!initialized) {
+        if (index === 0) {
           seen = new Set<string>()
-          initialized = true
         }
 
         const rowToHash = callback ? callback(value, index) : value
@@ -118,47 +116,89 @@ export function getInstance<PipelineOutput>({
       })
     },
 
-    async process() {
-      for await (const _ of getRows()) {
-        // side effects happen in the pipeline (forEach)
+    async run() {
+      let processed = 0
+
+      try {
+        for await (const _ of getRows()) {
+          processed++
+        }
+      } catch (error) {
+        if (error instanceof CSVError) {
+          error.results = processed
+          throw error
+        }
+        throw error
       }
     },
 
     async find(callback) {
-      for await (const { value, idx } of getRows()) {
-        if (await callback(value, idx)) {
-          return value
+      try {
+        for await (const { value, idx } of getRows()) {
+          if (await callback(value, idx)) {
+            return value
+          }
         }
+      } catch (error) {
+        if (error instanceof CSVError) {
+          error.results = null
+          throw error
+        }
+        throw error
       }
 
       return null
     },
 
     async findIndex(callback) {
-      for await (const { value, idx } of getRows()) {
-        if (await callback(value, idx)) {
-          return idx
+      try {
+        for await (const { value, idx } of getRows()) {
+          if (await callback(value, idx)) {
+            return idx
+          }
         }
+      } catch (error) {
+        if (error instanceof CSVError) {
+          error.results = -1
+          throw error
+        }
+        throw error
       }
 
       return -1
     },
 
     async every(callback) {
-      for await (const { value, idx } of getRows()) {
-        if (!(await callback(value, idx))) {
-          return false
+      try {
+        for await (const { value, idx } of getRows()) {
+          if (!(await callback(value, idx))) {
+            return false
+          }
         }
+      } catch (error) {
+        if (error instanceof CSVError) {
+          error.results = false
+          throw error
+        }
+        throw error
       }
 
       return true
     },
 
     async some(callback) {
-      for await (const { value, idx } of getRows()) {
-        if (await callback(value, idx)) {
-          return true
+      try {
+        for await (const { value, idx } of getRows()) {
+          if (await callback(value, idx)) {
+            return true
+          }
         }
+      } catch (error) {
+        if (error instanceof CSVError) {
+          error.results = false
+          throw error
+        }
+        throw error
       }
 
       return false
@@ -266,7 +306,7 @@ export function getInstance<PipelineOutput>({
       return count
     },
 
-    async key(property, filterUndefined) {
+    async pluck(property, filterUndefined) {
       const subset: PipelineOutput[typeof property][] = []
 
       try {
@@ -308,6 +348,7 @@ export function getInstance<PipelineOutput>({
 
       outputStream.write('[')
       let first = true
+      let error: unknown
 
       try {
         for await (const { value } of getRows()) {
@@ -325,10 +366,15 @@ export function getInstance<PipelineOutput>({
             await drain()
           }
         }
-      } finally {
+
         outputStream.write(']')
+      } catch (e) {
+        error = e
+      } finally {
         await finish()
       }
+
+      if (error) throw error
     },
 
     async toCSVFile(csvTarget, stringifyOptions) {
@@ -352,7 +398,10 @@ export function getInstance<PipelineOutput>({
           }
 
           const orderedValues = columnOrder!.map((key) => (value as any)[key])
-          stringifier.write(orderedValues)
+
+          if (!stringifier.write(orderedValues)) {
+            await new Promise<void>((resolve) => stringifier!.once('drain', resolve))
+          }
         }
       } finally {
         if (stringifier) {

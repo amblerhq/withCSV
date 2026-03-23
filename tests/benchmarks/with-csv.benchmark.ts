@@ -30,6 +30,6 @@ execute('Basic functions', [
       .rows()
   }),
   benchmark('uniq', async withCSVInstance => {
-    await withCSVInstance.uniq('Description').process()
+    await withCSVInstance.uniq('Description').run()
   }),
 ])

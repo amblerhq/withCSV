@@ -20,7 +20,7 @@ export function simpleHash(source: any): string {
 
       for (let i = 0; i < keys.length; i++) {
         if (i > 0) hash += '\x00'
-        hash += keys[i] + '\x00' + source[keys[i]]
+        hash += keys[i] + '\x00' + simpleHash(source[keys[i]])
       }
 
       return hash

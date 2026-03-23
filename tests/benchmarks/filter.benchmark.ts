@@ -2,7 +2,7 @@ import { benchmark, execute } from '..'
 
 execute('Filter operations', [
   benchmark('filter on single condition', async withCSVInstance => {
-    await withCSVInstance.filter(row => row['City']!.startsWith('A')).process()
+    await withCSVInstance.filter(row => row['City']!.startsWith('A')).run()
   }),
 
   benchmark('filter + map pipeline', async withCSVInstance => {

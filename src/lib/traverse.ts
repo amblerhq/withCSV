@@ -1,4 +1,4 @@
-import { ErrorPolicy } from '..'
+import { ErrorPolicy } from '../utils/types'
 import { CSVError, RowError } from '../utils/errors'
 import { getInterface } from '../utils/get-interface'
 import { applyPipeline, SKIP } from './apply-pipeline'
@@ -13,32 +13,36 @@ export async function* traverseRows<PipelineOutput>(options: {
 
   const readInterface = options.getCSVInterface()
 
-  for await (const row of readInterface) {
-    try {
-      const rawResult = applyPipeline(options.pipeline, row, idx)
-      const result = rawResult !== null && typeof rawResult === 'object' && typeof (rawResult as any).then === 'function'
-        ? await rawResult
-        : rawResult
+  try {
+    for await (const row of readInterface) {
+      try {
+        const rawResult = applyPipeline(options.pipeline, row, idx)
+        const result = rawResult !== null && typeof rawResult === 'object' && typeof (rawResult as any).then === 'function'
+          ? await rawResult
+          : rawResult
 
-      if (result !== SKIP) {
-        yield { value: result as PipelineOutput, idx }
-      }
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error))
+        if (result !== SKIP) {
+          yield { value: result as PipelineOutput, idx }
+        }
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error))
 
-      if (options.errors === 'throw-early') {
-        throw new CSVError([{ idx: idx + 1, error: err, message: err.message }])
+        if (options.errors === 'throw-early') {
+          throw new CSVError([{ idx: idx + 1, error: err, message: err.message }])
+        }
+
+        if (options.errors === 'throw-late') {
+          csvErrors.push({ idx: idx + 1, error: err, message: err.message })
+        }
       }
 
-      if (options.errors === 'throw-late') {
-        csvErrors.push({ idx: idx + 1, error: err, message: err.message })
-      }
+      idx++
     }
 
-    idx++
-  }
-
-  if (options.errors === 'throw-late' && csvErrors.length > 0) {
-    throw new CSVError(csvErrors)
+    if (options.errors === 'throw-late' && csvErrors.length > 0) {
+      throw new CSVError(csvErrors)
+    }
+  } finally {
+    readInterface.destroy()
   }
 }
